@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Agent Planning Coordination — Daniel Fried</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* ── 공유 노트북 위젯 전용 ───────────────────────── */
+  .nb-stage { display: grid; grid-template-columns: 1.05fr .95fr; gap: 1.4rem; padding: 1.4rem 1.2rem 1rem; align-items: start; }
+  @media (max-width: 760px) { .nb-stage { grid-template-columns: 1fr; } }
+  .nb-toggle { display: flex; gap: .4rem; margin-bottom: 1rem; }
+  .nb-toggle .btn { flex: 1; padding: .55rem .4rem; font-size: .78rem; }
+  .nb-toggle .btn.on { background: var(--ink-faint); color: #fff; border-color: var(--ink-faint); }
+  .nb-toggle .btn.on.nbon { background: var(--structure); border-color: var(--structure); }
+  .nb-pipe { display: flex; flex-direction: column; gap: .55rem; }
+  .nb-node { padding: .6rem .8rem; border-radius: 9px; border: 1px solid var(--line); background: var(--paper-2); font-size: .86rem; line-height: 1.5; color: var(--ink-soft); }
+  .nb-node .who { font-family: var(--mono); font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: .25rem; }
+  .nb-node b { color: var(--ink); }
+  .nb-node .flag { color: var(--style); font-weight: 700; }
+  .nb-node .flag.good { color: var(--structure); }
+  .nb-arrow { text-align: center; font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); margin: -.15rem 0; }
+  .nb-node.summary { background: var(--style-bg); border-color: var(--style-lo); }
+  .nb-node.notebook { background: var(--structure-bg); border-color: var(--structure-lo); }
+  .nb-charts { display: flex; flex-direction: column; gap: 1rem; }
+  .nb-bargrp { }
+  .nb-bargrp .lab { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .4rem; display: flex; justify-content: space-between; }
+  .nb-bargrp .lab .num { color: var(--ink); font-weight: 700; font-size: .8rem; }
+  .nb-track { height: 26px; background: var(--paper-sink); border-radius: 7px; overflow: hidden; position: relative; }
+  .nb-fill { height: 100%; border-radius: 7px; transition: width .6s var(--ease), background .4s; }
+  .nb-fill.hallu { background: var(--style); }
+  .nb-fill.pass  { background: var(--structure); }
+  .nb-track .ghost { position: absolute; top: 0; bottom: 0; border-right: 2px dashed var(--ink-faint); opacity: .5; }
+  .nb-cap { font-size: .82rem; color: var(--ink-soft); line-height: 1.55; padding: .6rem .8rem; border-left: 2px solid var(--structure-lo); background: var(--paper-2); border-radius: 0 7px 7px 0; }
+  .nb-cap b { color: var(--ink); }
+  .email-box { max-width: var(--measure); margin: 1.5rem auto; padding: 1.3rem 1.5rem; background: var(--structure-bg); border: 1px solid var(--structure-lo); border-radius: 18px; }
+  .email-box .ma-label { display: flex; align-items: center; gap: .4rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--structure); font-weight: 700; margin-bottom: .7rem; }
+  .email-box p { margin: 0 0 .7rem; font-size: .96rem; color: var(--ink); line-height: 1.72; }
+  .email-box p:last-child { margin-bottom: 0; }
+  .email-box .en { font-style: normal; }
+  .email-box strong { color: #1B64DA; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar"><a class="home" href="../index.html">← 전체 목록</a><span class="ch-mini">PAPER 7 / 8 · Fried</span></div>
+<div class="ch-layout"><aside class="ch-nav"><nav><ol>
+<li><a href="#s1" class="current">한 줄 요약</a></li><li><a href="#s2">문제와 동기</a></li><li><a href="#s3">핵심 아이디어</a></li><li><a href="#s4">주요 결과</a></li><li><a href="#s5">한계</a></li><li><a href="#s6">내 연구와의 연결</a></li><li><a href="#s7">컨택 이메일</a></li></ol></nav></aside>
+<main class="ch-main">
+<header class="ch-head"><span class="kicker">Daniel Fried · CMU LTI · 2025 · arXiv:2508.12981</span><h1>공유 노트북이 환각을 줄인다</h1><p class="lede">멀티에이전트가 검색 결과를 '요약'으로 넘기면 환각, 원본을 영속 저장하면 정확 — 내 KB '노트북 레이어'의 직접 정당화.</p></header>
+
+<section id="s1" class="prose">
+<p>이 논문은 멀티에이전트 시스템(MAS)이 <strong>긴 호흡의 계획 과제</strong>에서 왜 자꾸 무너지는지를 한 무대 위에서 해부한다. 무대는 <span class="t-structure">여행 계획(TravelPlanner)</span>이다. 약 400만 건 규모의 데이터베이스에서 예산, 동선, 영업시간 같은 제약을 <em>동시에</em> 만족시키는 일정을 짜야 한다. 저자들의 진단은 명료하다. 에이전트들이 서로 정보를 어떻게 넘기느냐가 성패를 가른다 — 검색한 사실을 <strong>요약으로 압축해 넘기면</strong> 항공편 번호 같은 세부가 환각되고, <strong>원본 그대로 영속 저장하면</strong> 그 환각이 사라진다.</p>
+<p>한 문장으로 압축하면 이렇다. 공유 노트북과 오케스트레이터를 붙이면 여행 계획의 통과율이 <strong>7.5%에서 25%로</strong>(단일 에이전트 대비 +17.5%p, Claude 기준) 뛴다. 노트북 하나만으로도 환각된 세부 오류가 <strong>18%</strong> 줄어든다. 단, 공짜는 아니다 — 조정 단계가 늘면서 <strong>전달률(delivery rate)은 오히려 떨어진다</strong>. 정보를 잘 보존하는 능력과 끝까지 완주하는 능력이 서로 당긴다는 것, 그게 이 논문이 정직하게 보여 주는 트레이드오프다.</p>
+<p><span class="kicker">저자 · Tianyue Ou, Saujas Vaduguru, Daniel Fried (CMU) · 2025-08 · <a href="https://arxiv.org/abs/2508.12981">arXiv abs</a> · <a href="https://arxiv.org/pdf/2508.12981">PDF</a></span></p>
+</section>
+
+<section id="s2" class="prose">
+<h2>문제와 동기 — 왜 '계획'에서 멀티에이전트가 약한가</h2>
+<p>멀티에이전트 시스템은 이미 여러 영역에서 단일 에이전트의 한계를 넘어섰다. 웹 리서치에서는 여러 에이전트가 자료를 나눠 모으고, 소프트웨어 엔지니어링에서는 코드를 쪼개 병렬로 손본다. 그런데 <strong>계획(planning)</strong>은 결이 다르다. 계획은 긴 시간에 걸쳐 얽힌 제약들을 한 번에 만족시켜야 하는 과제다. 여기서는 단일 에이전트가 자주 두 가지 방식으로 실패한다 — 첫째, 검색해 온 세부를 <span class="t-style">환각</span>해 버린다(없는 항공편 번호를 지어낸다). 둘째, 일정 뒷부분에서 제약 위반을 발견해도 <em>앞으로 되돌아가 고칠 구조가 없다</em>.</p>
+<p>저자들은 이 약점을 두 개의 구조적 공백으로 정리한다. 하나는 <span class="t-structure">메모리의 공백</span>이다 — 검색해 온 사실을 신뢰성 있게 보존하는 장치가 없다. 대화 기록에 사실이 섞여 흘러가다 보면, 후속 에이전트는 원본이 아니라 흐릿한 요약을 받아 들고 빈칸을 상상으로 메운다. 다른 하나는 <span class="t-synth">조정의 공백</span>이다 — 제약 충돌이 드러났을 때 앞 단계로 되감아 다시 풀 조정 구조가 없다. 고정된 한 방향 파이프라인은 한 번 어긋나면 그대로 끝까지 끌고 간다.</p>
+<div class="analogy"><b>전화 게임 vs 영수증 캐비닛.</b> 검색 결과를 요약으로만 넘기는 건 여러 사람이 줄지어 귓속말로 전하는 '전화 게임'과 같다. "대한항공 KE085, 14시 30분"이 몇 단계만 거치면 "오후에 출발하는 어떤 항공편"으로 뭉개지고, 빈자리를 누군가 그럴듯한 숫자로 채워 넣는다. 공유 노트북은 그 대신 <em>원본 영수증을 캐비닛에 그대로 보관하는</em> 방식이다. 누구든 필요할 때 캐비닛을 열어 원본 숫자를 다시 꺼내 읽으면, 전달 과정에서 사실이 변질되지 않는다.</p></div>
+</section>
+
+<div class="widget">
+  <div class="widget-frame">
+    <div class="widget-label"><span class="lab-no">위젯</span><span>공유 노트북 토글 — 요약 전달 vs 원본 영속 저장</span></div>
+    <div class="nb-stage">
+      <div>
+        <div class="nb-toggle">
+          <button class="btn ghost on" id="nbOff">노트북 OFF · 요약 전달</button>
+          <button class="btn ghost nbon" id="nbOn">노트북 ON · 원본 저장</button>
+        </div>
+        <div class="nb-pipe">
+          <div class="nb-node" id="nbSearch"><span class="who">검색 에이전트</span>DB 조회 결과: <b>대한항공 KE085 · 14:30 출발 · ₩482,000</b></div>
+          <div class="nb-arrow" id="nbArrow">↓ 요약으로 압축해 대화 기록에 전달</div>
+          <div class="nb-node summary" id="nbMid"><span class="who">전달 형태</span><span id="nbMidTxt">대화 요약: "오후에 출발하는 항공편 하나, 가격은 적당함"</span></div>
+          <div class="nb-arrow">↓</div>
+          <div class="nb-node" id="nbPlan"><span class="who">플래너 에이전트</span>최종 일정에 기록: <span class="flag" id="nbPlanTxt">항공편 KE<b style="color:inherit">119</b> · 13:05 출발 · ₩410,000 (환각된 세부)</span></div>
+        </div>
+      </div>
+      <div class="nb-charts">
+        <div class="nb-bargrp">
+          <div class="lab"><span>환각된 세부 오류율</span><span class="num" id="nbHalluNum">기준</span></div>
+          <div class="nb-track"><div class="nb-fill hallu" id="nbHallu" style="width:100%"></div></div>
+        </div>
+        <div class="nb-bargrp">
+          <div class="lab"><span>여행 계획 통과율</span><span class="num" id="nbPassNum">7.5%</span></div>
+          <div class="nb-track"><div class="ghost" style="left:7.5%"></div><div class="nb-fill pass" id="nbPass" style="width:7.5%"></div></div>
+        </div>
+        <div class="nb-cap" id="nbCap"><b>노트북 OFF.</b> 검색 사실이 대화 요약으로 압축돼 흐르면 플래너가 빈칸을 상상으로 메운다 — 항공편 번호, 출발 시각, 가격이 모두 틀어진다. 통과율은 단일 에이전트 수준인 <b>7.5%</b>에 머문다.</div>
+      </div>
+    </div>
+    <div class="widget-controls">
+      <span class="legend"><span>위 토글로 전달 방식을 바꿔 보라. 노트북을 켜면 검색 원본이 그대로 보존돼 환각이 <b>18%</b> 줄고 통과율이 <b>25%</b>로 오른다.</span></span>
+    </div>
+  </div>
+  <p class="widget-cap">막대 두 개가 동시에 움직인다 — 노트북을 켜면 빨간 환각률 막대는 18% 줄고, 파란 통과율 막대는 7.5%에서 25%로 늘어난다. 점선은 단일 에이전트 기준선(7.5%)이다. 핵심은 두 변화가 <em>같은 한 가지 설계</em>에서 나온다는 것이다. 정보를 대화 흐름에서 분리해 원본으로 영속 저장하면, 후속 에이전트가 흐릿한 요약이 아니라 원본 사실에 직접 조건화한다.</p>
+</div>
+
+<section id="s3" class="prose">
+<h2>핵심 아이디어 — 노트북과 오케스트레이터</h2>
+<p>저자들의 시스템은 여행 계획을 여섯 종류의 에이전트로 분업한다. <span class="t-structure">교통, 호텔, 식당, 관광</span> 네 전문 에이전트가 각자 영역을 검색하고, 그 위에 <span class="t-synth">오케스트레이터</span>가 흐름을 지휘하며, 마지막에 요약/컴파일/비평 역할이 결과를 다듬는다. 이 분업 자체는 흔한 구조다. 새로운 건 정보가 에이전트 사이를 <em>어떻게</em> 흐르느냐를 두 가지 장치로 다시 설계했다는 점이다.</p>
+<p>첫째, <span class="t-structure">공유 노트북(shared notebook)</span>이다. 보통의 MAS는 검색 결과를 <strong>대화 기록(conversation history)에 그대로 흘려보낸다</strong>. 그러면 사실이 토큰의 강물에 섞여 떠내려가다가 요약 단계에서 뭉개진다. 공유 노트북은 검색 결과를 대화 기록과 <em>분리된 별도의 영속 메모리</em>에 적어 두고, 플래너가 그 노트북을 직접 읽게 한다. 사실이 변질되지 않는 이유는 단순하다 — 전달 과정을 거치지 않고 원본을 직접 참조하기 때문이다.</p>
+<p>둘째, <span class="t-synth">오케스트레이터(orchestrator)</span>다. 고정된 발언 순서(교통→호텔→식당→관광) 대신, 오케스트레이터가 <strong>자기 반성(self-reflection)</strong>을 통해 매 단계 누가 다음에 말할지 동적으로 고른다. 더 중요한 건 제약 충돌이 감지됐을 때 <em>앞 단계로 회귀(rollback)</em>할 수 있다는 점이다. 예산이 초과됐다면 호텔 단계로 되돌아가 더 싼 선택을 다시 협상한다. 한 방향 파이프라인이 풀지 못하던 "뒤늦게 발견한 위반"을 이 회귀 구조가 메운다.</p>
+<div class="math-block">$$\text{pass rate} \;=\; \frac{\#\,\{\text{제약을 모두 만족한 완성 일정}\}}{\#\,\{\text{전체 시도}\}}, \qquad \text{delivery rate} \;=\; \frac{\#\,\{\text{끝까지 완주한 시도}\}}{\#\,\{\text{전체 시도}\}}$$</div>
+<p class="math-note">두 지표는 다른 것을 잰다. 통과율은 "끝까지 갔고 모든 제약도 맞췄는가"를, 전달률은 "애초에 끝까지 완주는 했는가"를 잰다. 이 논문의 트레이드오프는 정확히 이 둘 사이에서 일어난다 — 조정을 더 많이 할수록 통과율은 오르지만 완주에 실패하는 시도가 늘어 전달률이 내려간다.</p>
+<div class="analogy"><b>순서표 없는 사회자.</b> 오케스트레이터는 정해진 발표 순서표를 들고 있는 진행자가 아니라, 토론을 듣다가 "지금은 호텔 담당이 다시 말해야겠다"며 마이크를 되넘기는 사회자에 가깝다. 막판에 예산이 안 맞으면 처음 발표자에게 마이크를 돌려보내 다시 풀게 한다 — 한 방향으로만 흐르던 회의를 되감을 수 있게 만든 것이다.</p></div>
+</section>
+
+<section id="s4" class="prose">
+<h2>주요 결과 — 환각 18% 감소, 통과율 3배 이상</h2>
+<p>결과는 두 장치의 기여를 분리해서 보여 준다. <span class="t-structure">공유 노트북만</span> 붙여도 환각된 세부 오류가 <strong>18% 줄었다</strong> — 특히 항공편 번호 환각은 절반 이상이 사라졌다. 원본 사실을 직접 참조하니 플래너가 빈칸을 상상으로 메울 일이 줄어든 것이다. 여기에 <span class="t-synth">오케스트레이터</span>를 더하면 최대 <strong>13.5%p</strong>가 추가로 개선된다 — 회귀 구조가 제약 충돌을 뒤늦게라도 풀어 주기 때문이다.</p>
+<p>두 장치를 결합했을 때 여행 계획 <strong>통과율은 25%</strong>에 이른다. 단일 에이전트의 <strong>7.5%</strong>와 비교하면 +17.5%p, 세 배가 넘는 도약이다(Claude 기준). 다만 향상 폭은 <span class="t-style">모델 의존성이 크다</span>. 같은 시스템이라도 GPT-4o와 Claude Sonnet에서 개선 폭이 눈에 띄게 달라진다 — 조정 구조가 잘 작동하려면 모델 자체의 자기 반성 능력이 받쳐 줘야 한다는 뜻이다. 조정 설계는 어떤 모델에든 똑같이 듣는 만병통치약이 아니다.</p>
+</section>
+
+<section id="s5" class="prose">
+<h2>한계 — 조정 자체가 비용이다</h2>
+<p>이 논문의 가장 솔직한 한계는 결과 표 안에 그대로 적혀 있다. 멀티에이전트 시스템의 <strong>전달률이 단일 에이전트보다 낮다</strong> — <strong>83.75% vs 91.25%</strong>. 통과율은 세 배로 뛰었지만, 정작 <em>끝까지 완주하는 비율</em>은 오히려 떨어진 것이다. 조정 단계를 늘릴수록 어딘가에서 멈추거나 꼬여 완주에 실패하는 시도가 늘어난다. 한마디로 <span class="t-style">조정 자체가 비용</span>이다. 더 정교한 협력은 공짜로 얻어지지 않고, 완주율을 깎아 먹는다.</p>
+<p>다른 한계도 분명하다. 실험은 <strong>단일 벤치마크(TravelPlanner)</strong>에 한정됐다 — 다른 계획 도메인으로의 일반화는 아직 검증되지 않았다. 그리고 회귀 구조가 제값을 하려면 <strong>충돌 감지를 더 정확하게</strong> 하고 <strong>불필요한 조정 스텝을 줄여야</strong> 한다. 지금은 충돌을 놓치거나, 반대로 과도하게 되감아 완주를 망치는 경우가 섞여 있다. 통과율과 전달률을 동시에 끌어올리는 것 — 그게 남은 과제다.</p>
+</section>
+
+<section id="s6" class="prose">
+<h2>내 연구와의 연결 — 야간 루프의 환각원을 정조준</h2>
+<p>이 논문은 내가 돌리고 있는 <strong>야간 자율 에이전트 루프</strong>와 정면으로 겹친다. 그 루프의 구조 — 여러 전문 모듈이 분석하고, 집계하고, 최적화한 결과를 단계적으로 넘기는 흐름 — 가 정확히 이 논문의 <span class="t-structure">네 전문 에이전트 + 플래너</span> 패턴이다. 그리고 내가 겪던 실패의 정체도 여기서 드러난다. <em>앞 산출물을 요약으로만 넘겨받아 원본 수치를 환각하는</em> 현상 — 그게 바로 공유 노트북이 겨냥해 18%를 줄여낸 오류원이다.</p>
+<p>그래서 내가 만드는 <strong>네버마인드의 장기기억 KB</strong>는 단순한 압축 장치가 아니라, 이 논문이 말하는 <span class="t-structure">'노트북' 레이어</span>로 정당화된다. 핵심은 검색하거나 생성한 결과를 <em>대화 흐름에서 분리해 영속 저장</em>하고, 후속 에이전트가 흐릿한 요약이 아니라 <strong>원본 사실 그대로에 조건화</strong>하게 만드는 것이다. 압축이 목적이 아니라, 사실의 무손실 보존이 목적이다. 이 논문은 그 설계 선택이 환각률을 측정 가능한 만큼 낮춘다는 직접 증거를 준다.</p>
+<div class="key-point"><p>다만 이 논문은 동시에 <strong>경고도 함께 준다</strong> — 전달률 하락. 조정 단계를 늘릴수록 완주율이 떨어질 위험이 있으니, 네버마인드의 노트북 레이어도 <em>비용과 편익을 함께 측정</em>해야 한다. "노트북을 더 두텁게, 조정을 더 정교하게"가 항상 옳은 게 아니라, 통과율 이득과 전달률 손실을 한 화면에서 보는 계측이 설계 원칙이 되어야 한다.</p></div>
+</section>
+
+<section id="s7" class="prose">
+<h2>컨택 이메일 — 한 문단</h2>
+<p>이 연결고리를 컨택 메일의 본론으로 그대로 쓸 수 있다. 솔루션을 길게 설명하는 대신, "당신의 발견이 내 시스템의 실패 패턴과 거의 정확히 겹친다"는 한 문장으로 공감대를 만드는 게 핵심이다.</p>
+<div class="email-box">
+  <div class="ma-label">✉️ Email — body paragraph</div>
+  <p class="en">Your finding that a shared notebook cuts hallucinated-detail errors by <strong>18%</strong> while raising delivery cost maps almost exactly onto failure patterns I see in my own nightly multi-agent loop, and it motivates the long-term knowledge-base layer I'm building to let downstream agents condition on retrieved facts rather than lossy summaries.</p>
+</div>
+</section>
+
+<nav class="ch-foot"><a href="../p6-neubig-nemo/index.html"><div class="dir">← 이전</div><div class="ti">NEMO — 실행 인지 메모리</div></a><a href="../p8-fried-asi/index.html" class="next"><div class="dir">다음 →</div><div class="ti">ASI — 검증된 스킬 누적</div></a></nav>
+</main></div>
+
+<script>
+(function () {
+  /* ── scroll-progress ───────────────────────────── */
+  var prog = document.querySelector('.scroll-progress');
+  /* ── scrollspy ─────────────────────────────────── */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.ch-nav a'));
+  var sections = navLinks.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var st = window.scrollY || document.documentElement.scrollTop;
+    var docH = document.documentElement.scrollHeight - window.innerHeight;
+    if (prog) prog.style.width = (docH > 0 ? (st / docH) * 100 : 0) + '%';
+    var idx = 0, mark = st + window.innerHeight * 0.32;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i] && sections[i].offsetTop <= mark) idx = i;
+    }
+    navLinks.forEach(function (a, i) { a.classList.toggle('current', i === idx); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  /* ── KaTeX ─────────────────────────────────────── */
+  function renderMath() {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+  if (document.readyState === 'complete') renderMath();
+  else window.addEventListener('load', renderMath);
+
+  /* ════════════════════════════════════════════════
+     공유 노트북 위젯 — 요약 전달 vs 원본 영속 저장
+     ════════════════════════════════════════════════ */
+  var btnOff = document.getElementById('nbOff'), btnOn = document.getElementById('nbOn');
+  var elArrow = document.getElementById('nbArrow');
+  var elMid = document.getElementById('nbMid'), elMidTxt = document.getElementById('nbMidTxt');
+  var elPlan = document.getElementById('nbPlan'), elPlanTxt = document.getElementById('nbPlanTxt');
+  var elHallu = document.getElementById('nbHallu'), elHalluNum = document.getElementById('nbHalluNum');
+  var elPass = document.getElementById('nbPass'), elPassNum = document.getElementById('nbPassNum');
+  var elCap = document.getElementById('nbCap');
+
+  // 환각률은 OFF를 100% 기준으로 두고 ON에서 18% 절대 감소 → 82%로 표시
+  var STATES = {
+    off: {
+      mid: '대화 요약: "오후에 출발하는 항공편 하나, 가격은 적당함"',
+      midClass: 'nb-node summary',
+      plan: '항공편 KE<b style="color:inherit">119</b> · 13:05 출발 · ₩410,000 (환각된 세부)',
+      planFlag: 'flag',
+      hallu: 100, halluNum: '기준 100%',
+      pass: 7.5, passNum: '7.5%',
+      arrow: '↓ 요약으로 압축해 대화 기록에 전달',
+      cap: '<b>노트북 OFF.</b> 검색 사실이 대화 요약으로 압축돼 흐르면 플래너가 빈칸을 상상으로 메운다 — 항공편 번호, 출발 시각, 가격이 모두 틀어진다. 통과율은 단일 에이전트 수준인 <b>7.5%</b>에 머문다.'
+    },
+    on: {
+      mid: '노트북 원본: 대한항공 KE085 · 14:30 출발 · ₩482,000 (그대로 보존)',
+      midClass: 'nb-node notebook',
+      plan: '항공편 KE<b style="color:inherit">085</b> · 14:30 출발 · ₩482,000 (원본 일치)',
+      planFlag: 'flag good',
+      hallu: 82, halluNum: '−18% → 82%',
+      pass: 25, passNum: '25%',
+      arrow: '↓ 원본을 별도 영속 메모리에 저장, 플래너가 직접 읽음',
+      cap: '<b>노트북 ON.</b> 검색 원본이 대화 흐름과 분리돼 영속 저장되고, 플래너가 그 원본을 직접 참조한다. 항공편 번호 환각이 절반 이상 사라져 세부 오류가 <b>18%</b> 줄고, 통과율은 <b>25%</b>로 세 배 넘게 오른다.'
+    }
+  };
+
+  function apply(key) {
+    var s = STATES[key];
+    btnOff.classList.toggle('on', key === 'off');
+    btnOn.classList.toggle('on', key === 'on');
+    elArrow.textContent = s.arrow;
+    elMid.className = s.midClass; elMidTxt.textContent = s.mid;
+    elPlanTxt.className = s.planFlag; elPlanTxt.innerHTML = s.plan;
+    elHallu.style.width = s.hallu + '%'; elHalluNum.textContent = s.halluNum;
+    elPass.style.width = s.pass + '%'; elPassNum.textContent = s.passNum;
+    elCap.innerHTML = s.cap;
+  }
+
+  btnOff.addEventListener('click', function () { apply('off'); });
+  btnOn.addEventListener('click', function () { apply('on'); });
+  apply('off');
+})();
+</script>
+</body>
+</html>

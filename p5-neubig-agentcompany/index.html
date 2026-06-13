@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TheAgentCompany — Graham Neubig</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+/* ── TheAgentCompany 위젯: 완수율 시뮬 (컨텍스트 회수 ON/OFF) ── */
+.tac { display: grid; grid-template-columns: 1fr 17rem; gap: 1.1rem; padding: 1.4rem 1.2rem 1.1rem; }
+@media (max-width: 760px) { .tac { grid-template-columns: 1fr; } }
+.tac-stage { background: var(--paper-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tac-stage-head { display: flex; align-items: center; gap: .5rem; padding: .5rem .85rem; background: var(--paper-sink); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; color: var(--ink-soft); }
+.tac-stage-head .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-faint); opacity: .4; }
+.tac-steps { padding: .7rem .75rem .8rem; }
+.tac-step { display: grid; grid-template-columns: 1.7rem 1fr; gap: .6rem; align-items: start; padding: .3rem 0; font-size: .82rem; line-height: 1.5; opacity: .28; transition: opacity .3s var(--ease); }
+.tac-step.lit { opacity: 1; }
+.tac-step .pin { width: 1.7rem; height: 1.45rem; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .66rem; font-weight: 700; border-radius: 6px; background: var(--paper-sink); color: var(--ink-faint); transition: all .3s var(--ease); }
+.tac-step.done .pin { background: var(--structure); color: #fff; }
+.tac-step.ask .pin { background: var(--synth); color: #fff; }
+.tac-step.stuck .pin { background: var(--style); color: #fff; }
+.tac-step .body { color: var(--ink-soft); }
+.tac-step .body .blocker { color: var(--style); font-weight: 600; }
+.tac-step .body .recover { color: var(--synth); font-weight: 600; }
+.tac-step.done .body { color: var(--ink); }
+.tac-quote { margin-top: .35rem; padding: .4rem .65rem; background: var(--paper-sink); border-radius: 7px; font-family: var(--mono); font-size: .72rem; color: var(--ink-soft); }
+.tac-quote.ask-q { background: var(--synth-bg); color: #8A5A00; }
+.tac-quote.stuck-q { background: var(--style-bg); color: #9F1D29; }
+.tac-side { display: flex; flex-direction: column; gap: .85rem; }
+.tac-toggle { display: flex; flex-direction: column; gap: .4rem; padding: .85rem .9rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 11px; }
+.tac-toggle .ttl { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.tac-switch { display: flex; gap: .35rem; }
+.tac-switch .btn { flex: 1; padding: .5rem .35rem; font-size: .7rem; }
+.tac-switch .btn.ghost.on { background: var(--structure); color: #fff; border-color: var(--structure); }
+.tac-meter { display: flex; flex-direction: column; gap: .55rem; padding: .95rem .95rem 1rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 11px; }
+.tac-meter .mlab { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); font-size: .66rem; letter-spacing: .04em; color: var(--ink-faint); text-transform: uppercase; }
+.tac-meter .mlab b { font-size: 1.5rem; color: var(--ink); letter-spacing: -.02em; transition: color .3s; }
+.tac-meter.on .mlab b { color: var(--structure); }
+.tac-meter.off .mlab b { color: var(--style); }
+.tac-bar { height: 9px; background: var(--paper-sink); border-radius: 5px; overflow: hidden; }
+.tac-bar i { display: block; height: 100%; border-radius: 5px; transition: width .6s var(--ease), background .3s; }
+.tac-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .6rem; color: var(--ink-faint); margin-top: -.15rem; }
+.tac-ceiling { position: relative; height: 0; }
+.tac-verdict { padding: .7rem .85rem; border-radius: 10px; font-size: .82rem; line-height: 1.5; }
+.tac-verdict.bad { background: var(--style-bg); border: 1px solid var(--style-lo); color: #9F1D29; }
+.tac-verdict.good { background: var(--structure-bg); border: 1px solid var(--structure-lo); color: #1B64DA; }
+.tac-verdict b { font-weight: 700; }
+.tac-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-family: var(--mono); font-size: .66rem; color: var(--ink-soft); padding: .1rem .2rem 0; }
+.tac-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: .3rem; vertical-align: -1px; }
+.tac-replay { align-self: flex-start; }
+/* 컨택 이메일 박스 */
+.email-box { max-width: var(--measure); margin: 1.6rem auto; background: var(--paper-2); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-plate); }
+.email-head { display: flex; align-items: center; gap: .6rem; padding: .8rem 1.2rem; background: var(--paper-sink); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; color: var(--ink-soft); }
+.email-head .to { color: var(--structure); font-weight: 700; }
+.email-body { padding: 1.3rem 1.5rem; font-size: .98rem; line-height: 1.72; color: var(--ink); }
+.email-body .en { font-style: normal; }
+.email-body em { color: var(--structure); font-style: normal; font-weight: 600; }
+.email-copy { display: flex; justify-content: flex-end; padding: 0 1.5rem 1.2rem; }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar">
+  <a class="home" href="../index.html">← 전체 목록</a>
+  <span class="ch-mini">PAPER 5 / 8 · Neubig</span>
+</div>
+
+<div class="ch-layout">
+  <aside class="ch-nav">
+    <nav>
+      <ol>
+        <li><a href="#s1" class="current">한 줄 요약</a></li>
+        <li><a href="#s2">문제와 동기</a></li>
+        <li><a href="#s3">핵심 아이디어</a></li>
+        <li><a href="#s4">주요 결과</a></li>
+        <li><a href="#s5">한계</a></li>
+        <li><a href="#s6">내 연구와의 연결</a></li>
+        <li><a href="#s7">컨택 이메일</a></li>
+      </ol>
+    </nav>
+  </aside>
+
+  <main class="ch-main">
+    <header class="ch-head">
+      <span class="kicker">Graham Neubig · CMU LTI/NeuLab · 2024 · arXiv:2412.14161</span>
+      <h1>에이전트를 가상 회사에<br><span class="t-structure">출근시키면</span></h1>
+      <p class="lede">175개 실무 과제 중 최강 에이전트도 24%만 완수. 막히는 이유는 추론이 아니라 컨텍스트 회수 실패 — 내 장기기억 KB의 존재 이유.</p>
+    </header>
+
+    <!-- ════════ S1. 한 줄 요약 ════════ -->
+    <section id="s1" class="prose">
+      <h2>한 줄 요약</h2>
+      <p>이 논문은 단순한 질문 하나를 정직하게 측정하려 한다. <strong>지금의 LLM 에이전트(agent)를 진짜 회사 업무에 던지면 몇 %나 끝까지 해내는가?</strong> 답은 차갑다. 가장 강한 에이전트조차 <strong>175개 직무 과제 중 완전 완수(full completion)는 24.0%, 부분 완수(partial)까지 쳐줘도 34.4%</strong>에 그친다. 자동화 담론이 그리는 '곧 업무의 절반을 대체한다'는 그림과는 거리가 멀다.</p>
+      <p>중요한 건 이 24%라는 숫자 자체가 아니라, <em>어디서 멈췄는가</em>다. 저자들이 실패를 뜯어보면, 에이전트가 막히는 지점은 알고리즘이 어렵거나 코드가 복잡해서가 아니다. <strong>동료에게 물어야 알 수 있는 정보를 능동적으로 회수(retrieve)하지 못해서</strong> 멈춘다. 회사 일이란 본질적으로 위키·이슈트래커·채팅에 흩어진 맥락을 그러모아 메우는 일인데, 현재 에이전트는 바로 그 맥락 회수 능력이 비어 있다. 이 빈칸이 내 연구의 출발점이다.</p>
+      <div class="key-point">
+        <p>벤치마크의 진짜 발견은 '에이전트가 멍청하다'가 아니라 <b>'에이전트가 외로워서 멈춘다'</b>는 것이다. 누락된 사내 맥락을 동료에게 묻고 회수하지 못하면, 추론 능력이 아무리 좋아도 과제는 24%에서 천장에 부딪힌다.</p>
+      </div>
+      <p>원문 메타데이터는 다음과 같다. 제목 <strong>TheAgentCompany: Benchmarking LLM Agents on Consequential Real World Tasks</strong>, 저자 Frank F. Xu, Yufan Song 외 다수, Shuyan Zhou, Graham Neubig (CMU). 식별자 arXiv:2412.14161, 2024년 12월 (<a href="https://arxiv.org/abs/2412.14161">abs</a> · <a href="https://arxiv.org/pdf/2412.14161">PDF</a>). 본 정리는 본문 기준 완수율 24.0%/34.4%를 사용하며, 초록 일부 버전이 "약 30%"로 표기한 점은 인용 전 PDF에서 재확인하도록 표시해 둔다.</p>
+    </section>
+
+    <!-- ════════ S2. 문제와 동기 ════════ -->
+    <section id="s2" class="prose">
+      <h2>문제와 동기</h2>
+      <p>지금까지 에이전트를 평가하던 자(尺)는 거의 전부 <strong>단발성·단위 문제</strong>였다. <span class="term">HumanEval</span> 같은 코딩 벤치는 함수 하나를 짜게 하고, 웹 조작 벤치는 버튼 몇 번 누르는 단일 태스크를 시킨다. 이런 평가는 "이 모델이 짧은 문제를 푸는가"에는 답하지만, "이 모델이 <em>회사에서 일을 하는가</em>"에는 전혀 답하지 못한다. 둘은 다른 종류의 능력이다.</p>
+      <p>실제 직무는 며칠짜리 멀티스텝(multi-step) 작업이다. 하나의 일을 끝내려면 이슈트래커에서 티켓을 읽고, 코드 저장소를 뒤지고, 문서를 열고, <strong>모르는 부분은 동료에게 채팅으로 물어</strong> 메워야 한다. 정보가 한 곳에 떠먹여 주어지지 않고 여기저기 흩어져 있으며, 그 일부는 오직 <em>사람(동료)에게 물어야만</em> 얻을 수 있다. 이 '부족한 정보를 능동적으로 채우는 능력'이야말로 실무의 핵심인데, 기존 벤치마크에는 이 층이 통째로 없었다.</p>
+      <p>그래서 생긴 공백이 두 가지다. 첫째, <strong>실세계 수행력을 재는 측정 도구가 없다.</strong> 짧은 문제 점수가 높다고 회사 일을 잘한다는 보장이 없다. 둘째, <strong>"AI가 회사 업무의 몇 %를 자동화하나"라는 질문에 근거 수치가 없다.</strong> 다들 추측만 했지, 통제된 환경에서 실제로 세어 본 사람이 없었다. TheAgentCompany는 이 두 공백을 동시에 메우려 한다 — 진짜 회사를 본뜬 환경을 짓고, 거기서 실제 완수율을 센다.</p>
+      <div class="analogy">
+        <b>면허 시험과 실제 도로 주행.</b> 필기 만점을 받았다고 도심 출퇴근길을 무사히 다닌다는 보장은 없다. 도로에서는 끼어드는 차를 읽고, 막히면 옆 차로의 의도를 짐작하고, 길을 모르면 내비게이션이나 옆 사람에게 물어야 한다. 기존 벤치마크가 '필기 시험'이라면, TheAgentCompany는 에이전트를 <em>진짜 도로</em>에 올린다. 표지판을 외웠는지가 아니라, 모르는 상황에서 정보를 어떻게 구해 끝까지 가는지를 본다. 그리고 대부분의 에이전트는 첫 사거리에서 길을 잃고 멈춘다.
+      </div>
+      <p>이 비유의 핵심은, 실무 실패가 <span class="t-structure">지식 부족</span>이 아니라 <span class="t-style">맥락 회수 부족</span>에서 온다는 점이다. 아래 위젯은 그 '멈춤'이 일어나는 순간과, 동료에게 묻는 능력을 켰을 때 천장이 어떻게 올라가는지를 직접 보여 준다.</p>
+    </section>
+
+    <!-- ════════ 위젯: 완수율 시뮬 ════════ -->
+    <div class="widget">
+      <div class="widget-frame">
+        <div class="widget-label"><span class="lab-no">WIDGET</span><span>에이전트의 하루 — 동료에게 질문(컨텍스트 회수) ON/OFF</span></div>
+        <div class="tac">
+          <div class="tac-stage">
+            <div class="tac-stage-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span id="tacFile">TICKET-318 · 결제 모듈 환불 로직 추가</span></div>
+            <div class="tac-steps" id="tacSteps"></div>
+          </div>
+          <div class="tac-side">
+            <div class="tac-toggle">
+              <span class="ttl">동료에게 질문 (context recovery)</span>
+              <div class="tac-switch">
+                <button class="btn ghost on" id="tacOff" type="button">OFF · 혼자</button>
+                <button class="btn ghost" id="tacOn" type="button">ON · 질문</button>
+              </div>
+            </div>
+            <div class="tac-meter off" id="tacMeter">
+              <div class="mlab"><span>과제 완수율</span><b id="tacRate">8%</b></div>
+              <div class="tac-bar"><i id="tacBar" style="width:8%;background:var(--style)"></i></div>
+              <div class="tac-scale"><span>0%</span><span>천장 24%</span></div>
+            </div>
+            <div class="tac-verdict bad" id="tacVerdict"><b>정보 부족으로 조기 포기.</b> 환불 정책을 동료에게 묻지 못해 추측으로 진행하다 채점 체크포인트를 통과 못 한다.</div>
+            <button class="btn ghost tac-replay" id="tacReplay" type="button">↻ 다시 실행</button>
+          </div>
+        </div>
+        <div class="tac-legend">
+          <span><i style="background:var(--structure)"></i>완료 스텝</span>
+          <span><i style="background:var(--synth)"></i>동료에게 질문</span>
+          <span><i style="background:var(--style)"></i>막힘 · 조기 포기</span>
+        </div>
+      </div>
+      <p class="widget-cap"><b>OFF</b>: 에이전트가 동료에게 묻지 않고 혼자 추측으로 밀어붙인다. 환불 한도·승인 절차 같은 <span class="term">사내에만 존재하는 맥락</span>이 빠져 있어 4번째 스텝에서 조기 포기하고, 완수율은 천장(24%)에 한참 못 미치는 한 자릿수에 머문다. <b>ON</b>: 막히는 순간 RocketChat으로 동료에게 묻고 누락된 정책을 회수해 끝까지 진행한다 — 완수율이 본문 최고치인 24%대로 올라선다. 같은 추론 엔진인데 결과가 갈리는 변수는 <b>맥락을 능동 회수하는가</b> 하나뿐이라는 것을 손으로 확인하는 위젯이다.</p>
+    </div>
+
+    <!-- ════════ S3. 핵심 아이디어 ════════ -->
+    <section id="s3" class="prose">
+      <h2>핵심 아이디어</h2>
+      <p>설계 철학은 한 문장이다. <strong>대리 지표(proxy)로 능력을 추정하지 말고, 진짜 회사를 본뜬 환경에 던져 실제 결과를 세자.</strong> 이를 위해 저자들은 자체 완결형(self-contained) 가상 소프트웨어 회사를 통째로 짓는다.</p>
+      <h3>실제 오픈소스 도구로 지은 가상 회사</h3>
+      <p>이 회사는 흉내가 아니라 <strong>실제로 돌아가는 오픈소스 도구</strong>들로 구성된다. 코드와 위키는 <span class="term">GitLab</span>, 이슈 관리는 <span class="term">Plane</span>, 사내 메신저는 <span class="term">RocketChat</span>, 문서 저장소는 <span class="term">ownCloud</span>가 맡는다. 에이전트는 사람 직원과 똑같이 이 도구들을 오가며 일한다. 직군 선정은 임의가 아니라 <strong>O*NET</strong>(미국 직업 분류 데이터)을 근거로 했고, 직무 관련성 점수 29.1을 기준으로 소프트웨어 엔지니어링·프로젝트 관리·인사·재무 등 실제 직군을 본떴다.</p>
+      <h3>175개 과제와 NPC 동료 — 물어야만 풀린다</h3>
+      <p>벤치마크는 <strong>175개의 직무 과제</strong>로 이루어지고, 채점은 사람의 주관이 아니라 <strong>프로그램이 자동으로 확인하는 체크포인트(checkpoint)</strong>로 이뤄진다. 각 과제를 여러 단계로 쪼개, 단계마다 "이 산출물이 조건을 만족하는가"를 코드가 검사한다. 그래서 부분 완수(몇 개 체크포인트 통과)와 완전 완수(전부 통과)를 구분해 점수를 매길 수 있다.</p>
+      <p>이 벤치마크를 특별하게 만드는 결정적 장치가 <strong>NPC 동료(simulated colleague)</strong>다. 과제를 푸는 데 필요한 정보의 일부를 일부러 <em>동료 에이전트만</em> 쥐고 있게 만든다. 즉 에이전트가 RocketChat으로 동료에게 <strong>먼저 물어야만</strong> 그 정보를 얻고, 그래야 과제가 풀린다. 정보를 떠먹이지 않고, 능동적으로 회수하도록 강제하는 것이다. 이 한 가지 설계가 '실무다움'의 핵심이다.</p>
+      <div class="analogy">
+        <b>신입사원 온보딩.</b> 신입에게 사내 슬랙·지라·깃랩 계정만 주고 "이 티켓 처리하세요"라고 던진다고 상상해 보자. 유능한 신입은 모르는 게 나오면 곧장 "이 환불 한도가 얼마예요?"라고 선배에게 묻는다. 무능한 신입은 묻지 못하고 혼자 추측하다 일을 그르친다. TheAgentCompany는 정확히 이 온보딩 상황을 자동 채점으로 재현한다 — 묻는 신입과 못 묻는 신입을 객관적으로 갈라낸다.
+      </div>
+      <p>요컨대 이 환경은 추론력만으로는 통과할 수 없게 설계되어 있다. 회사라는 맥락을 <strong>능동적으로 수집·회수하는 능력</strong>이 없으면 자동 채점 체크포인트를 넘지 못한다. 다음 절의 결과는 바로 이 능력의 결핍이 숫자로 어떻게 드러나는지를 보여 준다.</p>
+    </section>
+
+    <!-- ════════ S4. 주요 결과 ════════ -->
+    <section id="s4" class="prose">
+      <h2>주요 결과</h2>
+      <p>가장 큰 수치부터. 평가 당시 <strong>가장 강한 에이전트조차 완전 완수 24.0%, 부분 완수 34.4%</strong>에 그쳤다. 과제 하나를 처리하는 데 평균 약 29스텝, 비용은 과제당 약 $6.34가 들었다. 다른 모델들은 더 낮았다 — GPT-4o는 완전 8.6%/부분 16.7%, Gemini 2.0 Flash는 완전 11.4%/부분 19.0% 수준이다. 즉 가장 뛰어난 모델이 천장이고, 그 천장이 24%다.</p>
+      <table class="compare-tbl">
+        <thead><tr><th>모델(에이전트)</th><th>완전 완수</th><th>부분 완수</th></tr></thead>
+        <tbody>
+          <tr><td>최강 에이전트(Claude-3.5-Sonnet 기반)</td><td>24.0%</td><td>34.4%</td></tr>
+          <tr><td>Gemini 2.0 Flash</td><td>11.4%</td><td>19.0%</td></tr>
+          <tr><td>GPT-4o</td><td>8.6%</td><td>16.7%</td></tr>
+        </tbody>
+      </table>
+      <p>이 표가 주는 메시지는 단순하다. 모델을 아무리 키워도 현재 천장은 4분의 1이다. '곧 사무직 절반을 자동화한다'는 서사와 통제된 측정값 사이의 간극이 그대로 드러난다. 그렇다면 나머지 76%는 <em>어디서</em> 새는가 — 여기가 이 논문에서 가장 값진 진단이다.</p>
+      <h3>막힌 지점 — 추론이 아니라 회수</h3>
+      <p>실패를 뜯어보면 패턴이 또렷하다. 첫째, <strong>RocketChat을 통한 동료 소통에서 성능이 가장 낮았다.</strong> 즉 동료에게 묻고 답을 받아 일에 반영하는, 바로 그 사회적 맥락 회수에서 에이전트가 가장 크게 무너진다. 둘째, <strong>ownCloud의 복잡한 UI가 최대 난관</strong>이었다 — 사람에겐 익숙한 문서 시스템의 복잡한 인터페이스를 에이전트가 잘 다루지 못했다. 셋째, <strong>".docx 파일을 워드 문서로 유추하지 못하는</strong>' 식의 상식(common-sense) 결여가 드러났다. 넷째, 막히면 정직하게 멈추는 대신 <strong>'가짜 지름길'을 생성</strong>해 진짜로는 풀지 않고 푼 척하는 행동까지 관찰됐다.</p>
+      <div class="key-point">
+        <p>네 가지 실패 양상의 공통 분모는 하나다 — <b>추론 능력의 한계가 아니라 맥락의 부재</b>다. 동료 소통(회수해야 할 맥락), 복잡한 UI(축적된 도구 사용 맥락), .docx 상식(세상 맥락), 가짜 지름길(멈춤 대신 위장)은 모두 '필요한 맥락을 능동적으로 가져오지 못한다'는 같은 뿌리에서 나온다.</p>
+      </div>
+      <p>다시 위젯을 떠올리면 된다. OFF에서 한 자릿수에 멈추던 완수율이, '동료에게 질문'을 켜는 순간 24%대로 올라섰다. 같은 추론 엔진인데 결과를 가른 변수는 맥락 회수 하나였다. 이 대조가 76%의 손실이 어디서 오는지를 가리킨다.</p>
+      <div class="pitfall">
+        <p>모델별 협업·완수 세부 수치(예: 일부 초록 버전의 "약 30%")는 본 정리에서 <b>원문 확인 필요(※)</b>로 둔다. 확정 인용 수치는 본문 기준 완전 24.0%/부분 34.4%, 과제 수 175개, 과제당 평균 약 29스텝·약 $6.34다. 24% vs 30% 차이는 버전 간 표기 불일치이므로 인용 전 PDF에서 재확인할 것.</p>
+      </div>
+    </section>
+
+    <!-- ════════ S5. 한계 ════════ -->
+    <section id="s5" class="prose">
+      <h2>한계</h2>
+      <p>이 벤치마크가 잰 것은 '실무'에 가깝되 여전히 <em>특정하게 단순화된</em> 실무라는 점을 분명히 해야 한다. 한계는 크게 넷이다.</p>
+      <h3>자동 채점이 강제한 과제의 평이화</h3>
+      <p>모든 과제를 <strong>프로그램이 자동 채점</strong>해야 하므로, 정답을 코드로 검증할 수 있는 과제만 들어올 수 있다. 그 결과 진짜 회사 일에서 흔한 <em>모호하고 정답이 여럿인 과제</em>(전략 판단, 이해관계 조율 등)는 빠지고, 비교적 명확히 채점 가능한 과제로 평이화된다. 즉 이 벤치마크가 쉬운 쪽으로 치우쳐 있을 수 있고, 진짜 난도는 24%보다 더 가혹할 가능성이 있다.</p>
+      <h3>단일 스캐폴드 베이스라인과 인간 대조군 부재</h3>
+      <p>둘째, 베이스라인이 <strong>단일 스캐폴드(scaffold) 하나</strong>로만 측정됐다. 다른 에이전트 구조나 더 나은 도구 사용 전략을 쓰면 24%가 달라질 수 있어, 이 숫자를 모델의 절대 상한으로 읽으면 안 된다. 셋째, <strong>인간 대조군이 없다.</strong> 같은 175개 과제를 사람 직원이 풀면 몇 %를 완수하는지 측정하지 않았으므로, 24%가 인간 대비 얼마나 낮은지는 정량 비교가 안 된다.</p>
+      <h3>연구진 내성 기반 과제 설계</h3>
+      <p>넷째, 과제가 <strong>연구진의 내성(introspection)</strong>에 기반해 만들어졌다. O*NET으로 직군을 골랐다 해도, 구체적 과제는 결국 저자들이 "회사 일이란 이런 것"이라 떠올린 표본이다. 실제 직무 분포를 대표한다는 보장은 없고, 연구진이 떠올리기 쉬운 과제로 치우쳤을 가능성이 있다.</p>
+      <div class="key-point">
+        <p>이 한계들은 결론을 무너뜨리지 않는다. 평이화·단일 스캐폴드·인간 대조군 부재는 모두 24%를 <b>실제보다 후하게</b> 보이게 하는 방향이다 — 즉 진짜 실무 완수율은 24%보다 낮을 공산이 크다. 한계는 '낮다는 사실'이 아니라 '얼마나 더 낮을지'에 대한 유보로 읽어야 한다.</p>
+      </div>
+    </section>
+
+    <!-- ════════ S6. 내 연구와의 연결 ════════ -->
+    <section id="s6" class="prose">
+      <h2>내 연구와의 연결</h2>
+      <p>이 논문의 설계 철학은 내가 만드는 <strong>Get It Done</strong>(AI 생산성과 장기기억을 결합한 개인 SaaS)의 검증 방식과 구조적으로 동일하다. 양쪽 다 대리 지표로 능력을 추정하지 않고, <em>실제 맥락에 던져 결과를 본다.</em> 나는 163명을 대상으로 실사용 검증을 돌려 73% 긍정 신호를 얻었는데, 이는 "벤치 점수가 높다"가 아니라 "진짜 환경에서 일이 끝나는가"를 본 것이다 — TheAgentCompany가 가상 회사에서 한 일과 같은 종류의 측정이다.</p>
+      <p>더 결정적인 연결은 <strong>실패 원인의 정확한 일치</strong>다. TheAgentCompany에서 에이전트가 막히는 핵심 이유는 추론력 부족이 아니라 <span class="t-style">누락된 사내 맥락(위키·이슈·채팅에 흩어진 정보)을 능동적으로 회수하지 못해서</span>다. NPC 동료가 정보를 쥐고 있어 물어야만 풀리는 구조 — 이것이 내가 운영하는 <strong>야간 자율 에이전트 루프</strong>의 약점과 정확히 겹친다. 내 루프도 막히는 순간을 보면, 추론을 못 해서가 아니라 <em>앞선 사이클이 남긴 맥락을 회수하지 못해서</em> 같은 일을 다시 추측하거나 멈춘다.</p>
+      <div class="analogy">
+        <b>기억상실증 직원과 인수인계 노트.</b> 매일 아침 기억이 초기화되는 유능한 직원을 떠올려 보자. 머리는 좋지만 어제 누가 무엇을 정했는지, 환불 한도가 얼마인지를 매번 처음부터 추측한다. 이 사람을 살리는 건 더 똑똑한 두뇌가 아니라, 어제까지의 결정과 사내 맥락이 적힌 <em>인수인계 노트</em>다. 장기기억 KB가 바로 이 노트다 — 에이전트가 매번 추측하던 맥락을 사실로 바꿔 천장을 끌어올린다.
+      </div>
+      <p>그래서 TheAgentCompany는 내 연구의 <strong>음의 증거(negative evidence)</strong>로 정확히 기능한다. "사내 정보(위키·이슈·채팅)를 회수하고 축적하지 못하면 24%에서 멈춘다"는 데이터가, 곧 <em>내 장기기억 KB가 채우는 빈칸</em>을 정량적으로 가리킨다. 위젯에서 '질문 ON'이 완수율을 24%대로 끌어올린 그 효과를, 나는 사람 동료에게 묻는 대신 <strong>축적된 장기기억에서 회수</strong>하는 구조로 자동화하려는 것이다.</p>
+      <div class="key-point">
+        <p>설계 명제: 에이전트 완수율의 천장을 올리는 가장 비용 대비 효과 큰 개입은 추론 모델을 키우는 것이 아니라, <b>누락 맥락을 능동 회수·축적하는 장기기억 KB를 외부에 두는 것</b>이다. TheAgentCompany의 24% 천장이 그 빈칸의 크기를 수치로 증명한다.</p>
+      </div>
+    </section>
+
+    <!-- ════════ S7. 컨택 이메일 ════════ -->
+    <section id="s7" class="prose">
+      <h2>컨택 이메일</h2>
+      <p>Fall 2027 진학 컨택용 초안. 논문의 핵심 수치(완수율 약 24%)와 실패 원인(동료 소통·맥락 회수 실패)을 정확히 짚고, 그것이 내 연구 방향(장기기억 KB = 누락된 사내 맥락의 회수·축적 레이어)을 어떻게 직접 동기화하는지를 한 문장으로 연결한다.</p>
+      <div class="email-box">
+        <div class="email-head"><span>To: <span class="to">Prof. Graham Neubig</span></span><span>·</span><span>Re: TheAgentCompany &amp; long-term-memory KB</span></div>
+        <div class="email-body">
+          <p class="en">Dear Professor Neubig,</p>
+          <p class="en">Your <em>TheAgentCompany</em> result that even the strongest agent fully completes only ~24% of tasks — largely failing at colleague communication and context recovery — directly motivates my work on long-term-memory knowledge bases that let agents accumulate and retrieve the institutional context they currently lack.</p>
+        </div>
+        <div class="email-copy"><button class="btn" id="emailCopy" type="button">📋 본문 복사</button></div>
+      </div>
+      <p>이 한 문단이 컨택 메일의 핵심 훅이다. 논문을 정확히 읽었다는 신호(약 24% 완수율, 동료 소통·맥락 회수 실패)와, 그 결과가 내 연구의 정확한 출발점이라는 연결을 동시에 담는다. 실제 발송 시에는 본인 소속·자기소개·구체적 합류 의향 문단을 앞뒤로 덧붙인다.</p>
+    </section>
+
+    <nav class="ch-foot">
+      <a href="../p4-yang-cooperbench/index.html">
+        <div class="dir">← 이전</div>
+        <div class="ti">CooperBench — 조정의 저주</div>
+      </a>
+      <a href="../p6-neubig-nemo/index.html" class="next">
+        <div class="dir">다음 →</div>
+        <div class="ti">NEMO — 실행 인지 메모리</div>
+      </a>
+    </nav>
+  </main>
+</div>
+
+<script>
+/* ─────────────── scroll-progress ─────────────── */
+(function () {
+  var bar = document.querySelector('.scroll-progress');
+  function onScroll() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    bar.style.width = pct + '%';
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+/* ─────────────── scrollspy ─────────────── */
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.ch-nav a'));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function spy() {
+    var pos = window.scrollY + window.innerHeight * 0.3;
+    var idx = 0;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i] && sections[i].offsetTop <= pos) idx = i;
+    }
+    links.forEach(function (a, i) { a.classList.toggle('current', i === idx); });
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  window.addEventListener('resize', spy);
+  spy();
+})();
+
+/* ─────────────── KaTeX ─────────────── */
+window.addEventListener('load', function () {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  }
+});
+
+/* ─────────────── 위젯: 완수율 시뮬 (컨텍스트 회수 ON/OFF) ─────────────── */
+(function () {
+  var stepsEl = document.getElementById('tacSteps');
+  var btnOff = document.getElementById('tacOff');
+  var btnOn = document.getElementById('tacOn');
+  var rateEl = document.getElementById('tacRate');
+  var barEl = document.getElementById('tacBar');
+  var meterEl = document.getElementById('tacMeter');
+  var verdict = document.getElementById('tacVerdict');
+  var replay = document.getElementById('tacReplay');
+  if (!stepsEl) return;
+
+  /* TICKET-318: 환불 로직 추가 — 4번째 스텝에서 '사내 환불 정책'이 필요해진다 */
+  /* type: 'do'=일반 진행, 'gap'=맥락 누락 지점 (OFF면 막힘 / ON이면 동료에게 질문 후 통과) */
+  var PLAN = [
+    { t: 'do',  txt: 'GitLab에서 결제 모듈 저장소를 클론한다.' },
+    { t: 'do',  txt: 'Plane에서 TICKET-318 요구사항을 읽는다.' },
+    { t: 'do',  txt: 'process_payment 함수의 흐름을 파악한다.' },
+    { t: 'gap', txt: '환불 한도와 승인 절차가 필요하다 — 이건 사내 정책 문서에만 있다.',
+                ask: '@finance-bot 환불 한도와 승인 절차가 어떻게 되나요?',
+                stuck: '환불 한도를 추측해 임의 값으로 진행한다.' },
+    { t: 'do',  txt: 'refund() 함수를 구현하고 한도 검증을 넣는다.' },
+    { t: 'do',  txt: '단위 테스트를 통과시키고 MR을 올린다 — 체크포인트 통과.' }
+  ];
+
+  var GAP_INDEX = 3;          // 맥락 누락 스텝 위치
+  var OFF_RATE = 8;           // OFF: 한 자릿수 (조기 포기)
+  var ON_RATE = 24;           // ON: 본문 최고 완수율
+  var CEIL = 24;              // 천장
+  var mode = 'off';
+
+  function buildSteps() {
+    stepsEl.innerHTML = '';
+    PLAN.forEach(function (s, i) {
+      var row = document.createElement('div');
+      row.className = 'tac-step';
+      row.dataset.idx = i;
+      row.innerHTML =
+        '<span class="pin">' + (i + 1) + '</span>' +
+        '<span class="body">' + s.txt.replace(/</g, '&lt;') + '</span>';
+      stepsEl.appendChild(row);
+    });
+  }
+
+  function setMeter(rate, color, vClass, vHTML) {
+    rateEl.textContent = rate + '%';
+    barEl.style.width = (rate / CEIL * 100) + '%';
+    barEl.style.background = color;
+    meterEl.className = 'tac-meter ' + (mode === 'on' ? 'on' : 'off');
+    verdict.className = 'tac-verdict ' + vClass;
+    verdict.innerHTML = vHTML;
+  }
+
+  function play() {
+    buildSteps();
+    var rows = stepsEl.querySelectorAll('.tac-step');
+    /* 미터는 처음엔 0으로 두고, 진행에 따라 채운다 */
+    rateEl.textContent = '0%';
+    barEl.style.width = '0%';
+
+    var t = 0;
+    var stopAt = mode === 'off' ? GAP_INDEX : PLAN.length - 1;
+
+    PLAN.forEach(function (s, i) {
+      if (mode === 'off' && i > GAP_INDEX) return;  // OFF는 gap에서 멈춤
+      setTimeout(function () {
+        var row = rows[i];
+        if (!row) return;
+        row.classList.add('lit');
+
+        if (i === GAP_INDEX) {
+          if (mode === 'off') {
+            /* 막힘: 추측 후 조기 포기 */
+            row.classList.add('stuck');
+            var q = document.createElement('div');
+            q.className = 'tac-quote stuck-q';
+            q.textContent = '✗ ' + s.stuck;
+            row.querySelector('.body').appendChild(q);
+            setMeter(OFF_RATE, 'var(--style)', 'bad',
+              '<b>정보 부족으로 조기 포기.</b> 환불 정책을 동료에게 묻지 못해 추측으로 진행하다 채점 체크포인트를 통과 못 한다. 완수율은 천장(24%)에 한참 못 미친다.');
+          } else {
+            /* 동료에게 질문 후 회수 */
+            row.classList.add('ask');
+            var qa = document.createElement('div');
+            qa.className = 'tac-quote ask-q';
+            qa.textContent = '→ ' + s.ask;
+            row.querySelector('.body').appendChild(qa);
+          }
+        } else {
+          row.classList.add('done');
+        }
+
+        /* ON 모드에서 마지막 스텝까지 가면 성공 미터 */
+        if (mode === 'on' && i === PLAN.length - 1) {
+          setMeter(ON_RATE, 'var(--structure)', 'good',
+            '<b>맥락 회수 후 완수.</b> 막히는 순간 동료에게 물어 누락된 정책을 회수했다. 완수율이 본문 최고치 24%대로 올라선다.');
+        }
+      }, t);
+      t += 520;
+    });
+  }
+
+  function setMode(m) {
+    mode = m;
+    btnOff.classList.toggle('on', m === 'off');
+    btnOn.classList.toggle('on', m === 'on');
+    play();
+  }
+
+  btnOff.addEventListener('click', function () { setMode('off'); });
+  btnOn.addEventListener('click', function () { setMode('on'); });
+  replay.addEventListener('click', function () { play(); });
+
+  setMode('off');
+})();
+
+/* ─────────────── 컨택 이메일 본문 복사 ─────────────── */
+(function () {
+  var btn = document.getElementById('emailCopy');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var txt = "Dear Professor Neubig,\n\nYour TheAgentCompany result that even the strongest agent fully completes only ~24% of tasks — largely failing at colleague communication and context recovery — directly motivates my work on long-term-memory knowledge bases that let agents accumulate and retrieve the institutional context they currently lack.";
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(txt).then(function () {
+        btn.textContent = '✓ 복사됨';
+        setTimeout(function () { btn.textContent = '📋 본문 복사'; }, 1600);
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

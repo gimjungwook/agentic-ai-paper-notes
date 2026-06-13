@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic AI 정독 — Fall 2027 교수 컨택</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/wiki.css">
+<script src="assets/wiki.js" defer></script>
+<style>
+  .home-main { padding: 3rem 3rem 7rem; max-width: 880px; }
+  .hero {
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background:
+      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--structure) 14%, transparent), transparent 50%),
+      radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--synth) 12%, transparent), transparent 50%),
+      var(--paper-2);
+    padding: 2.6rem 2.2rem; margin-bottom: 2.4rem;
+  }
+  .hero .kick { font-family: var(--mono); font-size: .76rem; color: var(--ink-faint); letter-spacing: .03em; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.08; letter-spacing: -0.035em; margin: .7rem 0 0; }
+  .hero h1 em { font-style: normal; color: var(--structure); }
+  .hero p { color: var(--ink-soft); margin: 1rem 0 0; max-width: 46rem; font-size: 1.04rem; }
+  .hero .meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.4rem; }
+  .hero .meta span { font-family: var(--mono); font-size: .72rem; color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: .32rem .7rem; }
+  .hero .meta b { color: var(--ink); }
+
+  .lead { font-size: 1.02rem; color: var(--ink-soft); margin: 0 0 1.2rem; }
+  .lead strong { color: var(--ink); }
+  .order { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-2); padding: 1.2rem 1.5rem; margin: 1.6rem 0 2.6rem; }
+  .order h4 { margin: 0 0 .5rem; font-size: 1rem; }
+  .order ol { margin: 0; padding-left: 1.2rem; } .order li { margin: .3rem 0; font-size: .94rem; color: var(--ink-soft); } .order li b { color: var(--ink); }
+
+  .grp-h { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 2.4rem 0 .9rem; display: flex; align-items: center; gap: .6rem; }
+  .grp-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .9rem; }
+  .card {
+    display: flex; flex-direction: column; text-decoration: none; color: inherit;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--paper-2);
+    padding: 1.2rem 1.3rem; transition: border-color .15s, transform .15s, background .15s;
+  }
+  .card:hover { border-color: var(--structure); transform: translateY(-2px); text-decoration: none; }
+  .card .no { font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+  .card h3 { font-size: 1.05rem; margin: .45rem 0 .45rem; line-height: 1.3; letter-spacing: -0.015em; }
+  .card p { font-size: .86rem; color: var(--ink-soft); line-height: 1.5; margin: 0; }
+  .card .hook { margin-top: .7rem; font-size: .8rem; color: var(--structure); font-weight: 600; line-height: 1.4; }
+  .card .arr { margin-top: .9rem; font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+  .card:hover .arr { color: var(--structure); }
+
+  .colophon { margin-top: 3.4rem; border-top: 1px solid var(--line); padding-top: 1.6rem; font-size: .85rem; color: var(--ink-soft); }
+  .colophon .src { font-family: var(--mono); font-size: .72rem; line-height: 1.85; margin-top: .8rem; color: var(--ink-faint); }
+  .colophon .src a { color: var(--structure); }
+  @media (max-width: 860px) { .home-main { padding: 1.8rem 1.3rem 6rem; } }
+</style>
+</head>
+<body>
+
+<div class="topbar"><span class="ch-mini">Fall 2027 · 논문 8편</span></div>
+
+<div class="ch-layout">
+  <aside class="ch-nav"><nav></nav></aside>
+  <main class="ch-main home-main">
+
+    <div class="hero">
+      <span class="kick">Fall 2027 PhD · 1순위 4인 교수 컨택 준비 · arXiv 원문 정독</span>
+      <h1>에이전트는 무엇을 <em>기억하고</em>,<br>언제 <em>물러나야</em> 하는가</h1>
+      <p>컨택할 4인 교수의 핵심 논문 8편을 원문 기반으로 정독한 자료. 각 논문은 문제·동기 → 핵심 아이디어 → 결과 → 한계 → 내 연구(장기기억 KB)와의 연결 → 컨택 이메일 순서로 풀고, 핵심 메커니즘마다 만져볼 수 있는 위젯을 붙였다.</p>
+      <div class="meta">
+        <span>주제 <b>장기기억 기반 Knowledge Base</b></span>
+        <span>논문 <b>8편</b></span>
+        <span>교수 <b>Andreas · Yang · Neubig · Fried</b></span>
+      </div>
+    </div>
+
+    <p class="lead">관통하는 질문은 하나다. <strong>"에이전트가 어디까지 개입하고 언제 물러나야 하는가(Human-AI delegation), 그 판단을 무엇으로 기억할 것인가."</strong> 8편 모두 이 질문의 한 조각을 다룬다.</p>
+
+    <div class="order">
+      <h4>🧭 추천 읽기 순서</h4>
+      <ol>
+        <li><b>Andreas (MIT)</b> — 개입 경계(ask vs act)와 선호 추출. 내 코어와 가장 가까움.</li>
+        <li><b>Yang (Stanford)</b> — Human Agency Scale과 멀티에이전트 조정 실패.</li>
+        <li><b>Neubig (CMU)</b> — 실세계 벤치마크의 한계와 실행 인지 메모리.</li>
+        <li><b>Fried (CMU)</b> — 공유 노트북과 검증된 스킬 누적 = 내 KB 레이어의 직접 정당화.</li>
+      </ol>
+    </div>
+
+    <div class="grp-h">🥇 Jacob Andreas · MIT LINGO Lab</div>
+    <div class="cards" id="g-andreas"></div>
+    <div class="grp-h">🥇 Diyi Yang · Stanford SALT Lab</div>
+    <div class="cards" id="g-yang"></div>
+    <div class="grp-h">🥇 Graham Neubig · CMU LTI / NeuLab</div>
+    <div class="cards" id="g-neubig"></div>
+    <div class="grp-h">🥇 Daniel Fried · CMU LTI</div>
+    <div class="cards" id="g-fried"></div>
+
+    <div class="colophon">
+      <p>일부 모델별 수치와 CooperBench의 게재 venue는 "원문 확인 필요"로 표기했으며, 인용 전 arXiv abstract를 직접 확인한다.</p>
+      <p class="src">
+        P1 <a href="https://arxiv.org/abs/2510.20886">2510.20886</a> · P2 <a href="https://arxiv.org/abs/2310.11589">2310.11589</a> · P3 <a href="https://arxiv.org/abs/2506.06576">2506.06576</a> · P4 <a href="https://arxiv.org/abs/2601.13295">2601.13295</a><br>
+        P5 <a href="https://arxiv.org/abs/2412.14161">2412.14161</a> · P6 <a href="https://arxiv.org/abs/2601.21372">2601.21372</a> · P7 <a href="https://arxiv.org/abs/2508.12981">2508.12981</a> · P8 <a href="https://arxiv.org/abs/2504.06821">2504.06821</a>
+      </p>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const PAPERS = {
+  andreas: [
+    { no:'P1', dir:'p1-andreas-shoot', t:'쏘기 전에 물어볼까, 그냥 쏠까', d:'협력형 배틀십으로 LM의 탐색(질문) vs 행동(사격) 균형을 진단하고, 베이지안 실험설계로 약한 모델도 인간/GPT-5를 이기게 만든다.', hook:'DBayes ask-vs-act = 개입 경계 문제와 동형' },
+    { no:'P2', dir:'p2-andreas-gate', t:'먼저 물어봐서 선호를 끌어내기 (GATE)', d:'사용자는 자기 선호를 완전히 말하지 못한다. LM이 능동적으로 질문해 선호를 끌어내는 GATE — 388명 실험서 자필 프롬프트보다 우위.', hook:'능동 선호 추출 = 네버마인드 선호 학습 루프' },
+  ],
+  yang: [
+    { no:'P3', dir:'p3-yang-future-of-work', t:'노동자는 무엇을 자동화하길 원하는가', d:'Human Agency Scale(H1-H5)로 "AI가 어디까지 개입할지"를 정량화. 1,500명 설문으로 자동화 욕구와 역량의 지도를 그린다.', hook:'HAS H3-H4 = "추천하되 결정은 사용자" 정량 근거' },
+    { no:'P4', dir:'p4-yang-cooperbench', t:'코딩 에이전트는 아직 동료가 될 수 없다', d:'에이전트 둘을 한 저장소에 붙이면 단독보다 30% 못한다 — 조정의 저주. 652개 협업 과제로 실측.', hook:'조정 유지율 0.59 → 공유 KB = 정답 상태 레이어' },
+  ],
+  neubig: [
+    { no:'P5', dir:'p5-neubig-agentcompany', t:'에이전트를 가상 회사에 출근시키면', d:'175개 실무 과제 중 최강 에이전트도 24%만 완수. 막히는 이유는 추론이 아니라 컨텍스트 회수 실패.', hook:'24% 한계 = 컨텍스트 회수 실패 = 내 KB 존재이유' },
+    { no:'P6', dir:'p6-neubig-nemo', t:'실행을 아는 코딩 에이전트 (NEMO)', d:'코드를 실제 돌려보고 결과를 되먹여 자가 교정하는 비대칭 검증 루프. 실행 가능성을 아키텍처 전제로.', hook:'실행 인지 외부 메모리 = 실행 가능한 경험 적재 KB' },
+  ],
+  fried: [
+    { no:'P7', dir:'p7-fried-coordination', t:'공유 노트북이 환각을 줄인다', d:'멀티에이전트가 검색 결과를 요약으로 넘기면 환각, 원본을 영속 저장하면 정확. 통과율 7.5%→25%.', hook:'노트북 -18% 환각 = 내 KB "노트북 레이어" 정당화' },
+    { no:'P8', dir:'p8-fried-asi', t:'검증된 스킬만 쌓는 에이전트 (ASI)', d:'성공 절차를 실행 검증 후 함수로 굳혀 재사용. WebArena 성공률 +23.5%, 단계 -15%.', hook:'검증된 스킬만 누적 = 신뢰도 오르는 KB (Fried·Neubig 공저)' },
+  ],
+};
+Object.entries(PAPERS).forEach(([k, list]) => {
+  const host = document.getElementById('g-' + k);
+  list.forEach(p => {
+    const a = document.createElement('a');
+    a.className = 'card'; a.href = p.dir + '/index.html';
+    a.innerHTML = `<span class="no">${p.no}</span><h3>${p.t}</h3><p>${p.d}</p><div class="hook">🪝 ${p.hook}</div><span class="arr">정독 →</span>`;
+    host.appendChild(a);
+  });
+});
+</script>
+</body>
+</html>

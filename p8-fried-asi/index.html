@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inducing Programmatic Skills (ASI) — Fried & Neubig</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* ── 스킬 유도·재사용 위젯 전용 ───────────────────── */
+  .si-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; padding: 1.4rem 1.2rem 1rem; align-items: start; }
+  @media (max-width: 760px) { .si-stage { grid-template-columns: 1fr; } }
+  .si-col h5 { margin: 0 0 .6rem; font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); display: flex; align-items: center; gap: .45rem; }
+  .si-col h5 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .si-col.raw h5 .dot { background: var(--style); }
+  .si-col.lib h5 .dot { background: var(--structure); }
+  .si-tape { display: flex; flex-direction: column; gap: .35rem; min-height: 13.5rem; }
+  .si-act { display: flex; align-items: center; gap: .55rem; padding: .5rem .7rem; background: var(--paper-2); border: 1px solid var(--line); border-left-width: 3px; border-left-color: var(--style-lo); border-radius: 9px; font-family: var(--mono); font-size: .78rem; color: var(--ink-soft); opacity: 0; transform: translateX(-8px); transition: opacity .3s var(--ease), transform .3s var(--ease), background .3s, border-color .3s; }
+  .si-act.show { opacity: 1; transform: translateX(0); }
+  .si-act.folding { background: var(--style-bg); border-left-color: var(--style); }
+  .si-act .n { font-family: var(--mono); font-size: .64rem; color: var(--ink-faint); flex: none; width: 1.1rem; }
+  .si-act .ico { flex: none; }
+  .si-skill { padding: .65rem .8rem; background: #fff; border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow-plate); margin-bottom: .45rem; opacity: 0; transform: translateY(8px); transition: opacity .35s var(--ease), transform .35s var(--ease); }
+  .si-skill.show { opacity: 1; transform: translateY(0); }
+  .si-skill .fn { font-family: var(--mono); font-size: .82rem; color: var(--structure); font-weight: 700; }
+  .si-skill .sig { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); margin-top: .2rem; line-height: 1.4; }
+  .si-skill .badge { display: inline-block; margin-top: .4rem; font-family: var(--mono); font-size: .6rem; letter-spacing: .06em; padding: .15rem .5rem; border-radius: 999px; }
+  .si-skill .badge.verified { background: var(--structure-bg); color: var(--structure); }
+  .si-skill .badge.reused { background: var(--synth-bg); color: #B45309; }
+  .si-gate { margin: .9rem 0 .2rem; padding: .7rem .85rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 10px; }
+  .si-gate .gt { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .5rem; }
+  .si-check { display: flex; align-items: center; gap: .5rem; font-family: var(--mono); font-size: .74rem; color: var(--ink-soft); padding: .15rem 0; }
+  .si-check .mk { width: 1.1rem; flex: none; text-align: center; color: var(--ink-faint); transition: color .3s; }
+  .si-check.pass .mk { color: var(--structure); }
+  .si-empty { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); padding: .9rem .2rem; line-height: 1.5; }
+  .si-ctrl { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .si-ctrl .btn { padding: .55rem .95rem; }
+  .si-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; margin-left: auto; }
+  @media (max-width: 760px) { .si-metrics { margin-left: 0; width: 100%; } }
+  .si-meter { padding: .45rem .6rem; background: #fff; border: 1px solid var(--line); border-radius: 9px; text-align: center; min-width: 4.4rem; }
+  .si-meter .lab { font-family: var(--mono); font-size: .58rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); }
+  .si-meter .val { font-family: var(--mono); font-size: 1.08rem; font-weight: 700; color: var(--ink); line-height: 1.25; transition: color .3s; }
+  .si-meter.win .val { color: var(--structure); }
+  .si-meter.step .val { color: var(--style); }
+  .si-stage-tag { font-family: var(--mono); font-size: .68rem; color: var(--ink-soft); padding: .55rem .8rem; border-left: 2px solid var(--structure-lo); background: var(--paper-2); border-radius: 0 7px 7px 0; line-height: 1.5; margin-top: .2rem; }
+  .si-stage-tag b { color: var(--ink); }
+
+  /* 이메일 박스 */
+  .email-box { max-width: var(--measure); margin: 1.5rem auto; padding: 1.3rem 1.5rem; background: var(--structure-bg); border: 1px solid var(--structure-lo); border-radius: 18px; }
+  .email-box .ma-label { display: flex; align-items: center; gap: .4rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--structure); font-weight: 700; margin-bottom: .7rem; }
+  .email-box p { margin: 0 0 .7rem; font-size: .96rem; color: var(--ink); line-height: 1.72; }
+  .email-box p:last-child { margin-bottom: 0; }
+  .email-box .en { font-style: normal; }
+  .email-box strong { color: #1B64DA; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar"><a class="home" href="../index.html">← 전체 목록</a><span class="ch-mini">PAPER 8 / 8 · Fried·Neubig</span></div>
+<div class="ch-layout"><aside class="ch-nav"><nav><ol>
+<li><a href="#s1" class="current">한 줄 요약</a></li><li><a href="#s2">문제와 동기</a></li><li><a href="#s3">핵심 아이디어</a></li><li><a href="#s4">주요 결과</a></li><li><a href="#s5">한계</a></li><li><a href="#s6">내 연구와의 연결</a></li><li><a href="#s7">컨택 이메일</a></li></ol></nav></aside>
+<main class="ch-main">
+<header class="ch-head"><span class="kicker">Wang, Gandhi, Neubig, Fried · CMU · 2025 · arXiv:2504.06821</span><h1>검증된 스킬만 쌓는 에이전트</h1><p class="lede">성공 절차를 실행 검증 후 함수로 굳혀 재사용 — "학습이 쌓일수록 신뢰도가 오르는 KB" 설계 논거. (Fried·Neubig 공저, CMU 양쪽 커버)</p></header>
+
+<section id="s1" class="prose">
+<p>이 논문은 에이전트의 학습에 관한 아주 인간적인 직관에서 출발한다. 사람은 같은 종류의 일을 두 번째 할 때 처음부터 다시 고민하지 않는다. 한 번 익힌 절차를 <strong>기술(skill)</strong>로 굳혀 두었다가, 다음번엔 그 기술을 통째로 꺼내 쓴다. 그런데 오늘날의 웹 에이전트는 그렇지 못하다. "상품을 검색해서 장바구니에 담아라" 같은 작업을 매번 마주칠 때마다, 클릭하고 입력하고 또 클릭하는 <span class="t-style">원시 액션(primitive action)</span>을 처음부터 새로 조합한다. 비효율적이고, 매번 새로 조합하니 매번 새로 실수한다.</p>
+<p>저자들의 처방을 한 문장으로 압축하면 이렇다 — 성공한 궤적에서 <span class="t-structure">실행 가능한 프로그램 스킬</span>을 그 자리에서(on-the-fly) 유도해 내되, <strong>실제로 실행해 검증을 통과한 것만</strong> 라이브러리에 누적하고 재사용한다. 이름하여 <span class="term">Agent Skill Induction (ASI)</span>. 그 결과 WebArena 벤치마크에서 정적 에이전트 대비 성공률은 <strong>+23.5%</strong> 오르면서 동시에 작업당 단계 수는 약 <strong>15% 줄었다</strong> — 더 잘하면서 더 짧게. 정확도와 효율이 한 방향으로 같이 움직였다는 점이 이 논문의 핵심 매력이다.</p>
+<p><span class="kicker">저자 · Zora Zhiruo Wang, Apurva Gandhi, Graham Neubig, Daniel Fried (CMU) · 2025-04 · <a href="https://arxiv.org/abs/2504.06821">arXiv abs</a> · <a href="https://arxiv.org/pdf/2504.06821">PDF</a></span></p>
+</section>
+
+<section id="s2" class="prose">
+<h2>문제와 동기 — 왜 '글로 적은 스킬'로는 부족한가</h2>
+<p>에이전트에게 경험을 누적시키려는 시도는 이미 있었다. 가장 직접적인 선행 연구가 <span class="term">텍스트 워크플로 메모리(AWM)</span>다. 성공한 작업의 절차를 <strong>자연어 메모</strong>로 적어 두었다가, 다음번에 비슷한 작업을 만나면 그 메모를 프롬프트에 끼워 넣어 참고하게 하는 방식이다. 사람이 노트에 "검색창에 키워드 치고, 첫 결과 누르고…"라고 적어 두는 것과 같다.</p>
+<p>문제는 자연어가 본질적으로 <strong>모호하다</strong>는 데 있다. 글로 적힌 절차는 다음에 쓸 때 <em>다시 해석</em>해야 한다. "첫 결과를 누르라"는 메모가 실제 화면에서 어느 버튼인지, 검색 결과가 비었을 땐 어떻게 하는지 — 모형이 매번 새로 추론해야 하고, 그 추론이 어긋나면 그대로 실패가 된다. 신뢰성이 낮다는 뜻이다. 게다가 글로 적은 메모는 "이게 정말 작동하는 절차인지"를 객관적으로 확인할 길이 없다.</p>
+<p>여기서 저자들의 결정적 전환이 나온다. 절차를 자연어가 아니라 <span class="t-structure">프로그램(코드)</span>으로 적자는 것이다. 프로그램에는 세 가지 결정적 장점이 있다. 첫째, <strong>명확하다</strong> — 코드는 해석의 여지가 없다. 둘째, <strong>실행으로 객관 검증이 가능하다</strong> — 실제로 돌려 보면 되는지 안 되는지가 그 자리에서 판가름 난다. 셋째, <strong>호출 한 번으로 다단계 절차를 추상화</strong>한다 — 열 번의 클릭이 <span class="term">search_product()</span> 한 줄이 된다. 이 세 번째가 단계 수 감소의 직접적 원천이다.</p>
+<div class="analogy"><b>양파 다지는 법, 레시피 카드로 남기기.</b> 요리를 할 때마다 "양파를 어떻게 썰지"를 매번 고민하면 손이 느리고 매번 모양이 다르다. 노련한 요리사는 한 번 익힌 손질법을 레시피 카드 한 장으로 적어 두고, 다음부터는 카드만 꺼내 "양파 다지기" 한 단계로 처리한다. 다만 — 적기만 하고 안 써 본 카드를 영구 보관하면 위험하다. 그래서 좋은 요리사는 <em>실제로 그 카드대로 했을 때 제 맛이 나는지 한 번 검증한 뒤에만</em> 카드를 서랍에 넣는다. 검증을 통과한 카드만 쌓이니, 서랍은 쓸수록 믿을 만해진다. ASI가 하는 일이 정확히 이것이다.</p></div>
+</section>
+
+<div class="widget">
+  <div class="widget-frame">
+    <div class="widget-label"><span class="lab-no">위젯</span><span>스킬 유도·재사용 — 검증 통과분만 쌓이는 라이브러리</span></div>
+    <div class="si-stage">
+      <div class="si-col raw">
+        <h5><span class="dot"></span>원시 액션 시퀀스 (이번 과제)</h5>
+        <div class="si-tape" id="siTape"></div>
+      </div>
+      <div class="si-col lib">
+        <h5><span class="dot"></span>스킬 라이브러리</h5>
+        <div id="siLib"><div class="si-empty" id="siEmpty">아직 비어 있음. 성공 궤적을 묶어 함수로 추상화하고, 3중 판정을 통과하면 여기에 누적됩니다.</div></div>
+        <div class="si-gate" id="siGate" hidden>
+          <div class="gt">3중 판정 (모두 통과해야 누적)</div>
+          <div class="si-check" id="siC1"><span class="mk">○</span> 기능 정확성 — 작업을 완수했는가</div>
+          <div class="si-check" id="siC2"><span class="mk">○</span> 스킬 사용 — 새 함수를 최소 1회 호출했는가</div>
+          <div class="si-check" id="siC3"><span class="mk">○</span> 스킬 유효성 — 모든 호출이 환경 상태를 실제로 바꿨는가</div>
+        </div>
+        <div class="si-stage-tag" id="siTag">1단계: 원시 액션 시퀀스를 봅니다. <b>'스킬로 묶기'</b>를 누르세요.</div>
+      </div>
+    </div>
+    <div class="widget-controls">
+      <div class="si-ctrl">
+        <button class="btn" id="siFold">스킬로 묶기</button>
+        <button class="btn ghost" id="siReuse" disabled>다음 과제에서 재사용</button>
+        <button class="btn ghost" id="siReset">처음부터</button>
+      </div>
+      <div class="si-metrics">
+        <div class="si-meter step"><div class="lab">스텝 수</div><div class="val" id="siSteps">8</div></div>
+        <div class="si-meter win"><div class="lab">성공률</div><div class="val" id="siWin">71.0%</div></div>
+        <div class="si-meter"><div class="lab">스킬 수</div><div class="val" id="siCount">0</div></div>
+      </div>
+    </div>
+  </div>
+  <p class="widget-cap">왼쪽은 한 과제를 풀며 쌓은 <em>원시 액션</em>(클릭→입력→클릭…). <strong>스킬로 묶기</strong>를 누르면 이 묶음이 함수 <span class="term">search_product()</span>로 추상화되고, <strong>3중 판정</strong>(완수·사용·상태변화)을 모두 통과해야 라이브러리에 들어간다. 검증 통과분만 누적되므로 — 통과하지 못한 절차는 영구 저장되지 않는다. <strong>재사용</strong>을 누르면 다음 과제에서 함수 1콜로 처리돼 스텝 수가 8→약 7로(−15%) 줄고, 성공률은 +23.5%p 올라간다. 누적이 쌓일수록 라이브러리는 더 믿을 만해진다.</p>
+</div>
+
+<section id="s3" class="prose">
+<h2>핵심 아이디어 — 유도, 검증, 3중 판정, 재사용의 4단계</h2>
+<p>ASI는 네 단계의 고리로 돌아간다. 하나씩 따라가 보자.</p>
+<p><strong>(1) 유도(induction).</strong> 에이전트가 어떤 작업을 <em>성공적으로</em> 마친 에피소드를 본다. 그 안에서 의미 있게 반복되는 액션 묶음 — 예컨대 "검색창 클릭 → 키워드 입력 → 검색 버튼 클릭 → 첫 결과 선택" — 을 골라, 호출 가능한 <span class="t-structure">함수</span>로 추상화한다. 열 줄짜리 원시 액션이 <span class="term">search_product(query)</span> 한 줄로 응축된다.</p>
+<p><strong>(2) 검증(verification).</strong> 여기가 AWM과 갈리는 지점이다. ASI는 새로 만든 함수를 단지 "그럴듯하다"고 받아들이지 않는다. 함수로 다시 쓴 궤적의 앞부분(프리픽스)을 <strong>실제 환경에서 실행</strong>해 본다. 코드를 진짜로 돌려서 결과를 관찰한다는 뜻이다.</p>
+<p><strong>(3) 3중 판정(triple gate).</strong> 실행 결과가 세 가지 조건을 <em>모두</em> 만족할 때만 그 스킬을 라이브러리에 추가한다.</p>
+<ul>
+  <li><span class="t-structure">기능 정확성</span> — 함수를 쓴 궤적이 원래 작업을 제대로 완수했는가.</li>
+  <li><span class="t-style">스킬 사용</span> — 새로 만든 함수가 실행 중 최소 1회는 실제로 호출됐는가 (장식만 하고 안 쓰이면 탈락).</li>
+  <li><span class="t-synth">스킬 유효성</span> — 함수의 모든 호출이 환경 상태를 <em>실제로 변화</em>시켰는가 (아무 일도 안 일어나는 헛호출이면 탈락).</li>
+</ul>
+<p>이 세 게이트가 함께 작동해 "검증되지 않은 스킬이 영구 저장되어 오류가 누적되는" 사태를 막는다. <strong>(4) 재사용·조합(reuse).</strong> 게이트를 통과한 스킬은 라이브러리에 남아, 이후 과제에서 한 번의 호출로 불려 나오고 다른 스킬과 조합된다.</p>
+<div class="math-block">$$ \text{induce} \;\to\; \text{execute} \;\to\; \underbrace{g_{\text{완수}} \wedge g_{\text{사용}} \wedge g_{\text{상태변화}}}_{\text{3중 판정}} \;\Rightarrow\; \mathcal{L} \cup \{\text{skill}\} $$</div>
+<p class="math-note">세 게이트의 논리곱(AND)이 참일 때만 스킬이 라이브러리 𝓛에 추가된다. 하나라도 거짓이면 폐기 — 누적되는 것은 오직 검증 통과분뿐이다.</p>
+<p>왜 굳이 셋을 <em>모두</em> 요구할까? 하나라도 빠지면 구멍이 생기기 때문이다. 완수만 보면 우연히 맞은 잘못된 함수가 통과한다. 사용 조건이 없으면 한 번도 안 불리는 죽은 코드가 쌓인다. 상태변화 조건이 없으면 클릭은 했지만 아무 효과 없는 헛동작이 "유효 스킬"로 둔갑한다. 세 조건의 논리곱이 바로 신뢰성의 자물쇠다.</p>
+<div class="pitfall"><p>ASI의 가치는 "스킬을 많이 만드는 것"이 아니라 <strong>"통과 못 한 스킬을 버리는 것"</strong>에 있다. 절제 실험이 이를 뒷받침한다 — 검증 프로그램을 실제 실행 없이 <em>텍스트로만</em> 제시한 변형은 ASI보다 <strong>3.7점 낮았다</strong>. 형식(실행 가능한 코드)이 곧 신뢰성이라는 증거다.</p></div>
+</section>
+
+<section id="s4" class="prose">
+<h2>주요 결과 — 더 잘하면서 더 짧게</h2>
+<p>벤치마크는 <strong>WebArena</strong>(812개 예제, 5개 도메인)다. 베이스라인은 둘 — 누적 학습이 없는 <span class="t-structure">정적 에이전트</span>와, 자연어 메모로 학습하는 <span class="t-style">텍스트 스킬(AWM)</span>이다.</p>
+<p>결과는 두 축에서 동시에 좋아진다. <strong>정확도</strong> — 정적 에이전트 대비 성공률 <strong>+23.5%</strong>, AWM 대비 <strong>+11.3%</strong>. 프로그램 형식이 텍스트 메모보다 확실히 우위라는 뜻이다. <strong>효율</strong> — 동시에 작업당 단계 수가 정적 대비 약 <strong>15.3% 줄었다</strong>. 보통 정확도를 올리면 신중해지느라 단계가 늘기 마련인데, ASI는 한 함수 호출이 여러 원시 액션을 대체하므로 정확도와 효율이 같은 방향으로 움직인다.</p>
+<p>특히 <strong>긴 호흡의 작업</strong>에서 격차가 벌어진다. 단계가 많은 long-horizon 과제일수록 정적 에이전트 대비 우위가 <strong>+38.9%</strong>까지 확대됐다 — 복잡한 절차일수록 "굳혀 둔 스킬"의 효과가 크다는 직관과 정확히 일치한다. 사이트 전이에서도 강하다 — Reddit에서 <strong>76.7%</strong>(정적 40%), Shopping에서 <strong>90.0%</strong>를 기록했다.</p>
+<p>그리고 앞서 본 절제 실험이 설계의 핵심을 못 박는다. 검증을 텍스트로만 흉내 낸 변형은 ASI보다 <strong>3.7점 낮았다</strong>. "실제로 실행해 검증한다"는 한 가지가 빠지면 성능이 떨어진다 — 형식이 곧 신뢰성이다.</p>
+</section>
+
+<section id="s5" class="prose">
+<h2>한계 — 무엇을 아직 안 풀었나</h2>
+<p>저자들도 한계를 분명히 한다. 첫째, <strong>스킬의 입도(granularity)</strong> — 함수를 얼마나 잘게/굵게 묶어야 최적인지는 탐구되지 않았다. 너무 잘게 쪼개면 추상화 이득이 적고, 너무 굵게 묶으면 재사용 범위가 좁아진다. 둘째, <strong>사이트 특화</strong> — 특정 사이트에 맞춰 유도된 프로그램은 구조가 다른 사이트로 옮기면 추가 적응이 필요하다. 셋째, <strong>장기 진화 안정성</strong> — 스킬 라이브러리가 오래 누적되며 진화할 때의 안정성이 충분히 검증되지 않았다. 넷째, 실험이 <strong>WebArena라는 합성 환경</strong>에 한정됐다 — 실제 웹의 더 거친 변동성으로의 일반화는 미해결로 남는다.</p>
+</section>
+
+<section id="s6" class="prose">
+<h2>내 연구와의 연결 — 야간 루프의 스킬화 청사진</h2>
+<p>이 논문은 내가 만들고 있는 <strong>네버마인드</strong> — 사용자를 끊임없이 학습하는 장기기억 기반 개인 AI SaaS — 의 야간 자율 루프 설계에 거의 그대로 들어맞는 청사진이다. 우리 에이전트는 매일 밤 반복되는 작업들을 처리하는데, 지금은 같은 절차를 매번 재구성한다. ASI의 "<strong>성공 궤적 → 프로그램 스킬 유도 → 실행 검증 → 누적</strong>" 고리가 정확히 이 반복 작업을 스킬로 굳히는 방법을 보여준다. 매일 같은 절차를 새로 짜는 대신 검증된 함수로 굳혀 재사용하면 — ASI가 보였듯 단계 수와 실패율이 함께 줄어든다.</p>
+<p>특히 <span class="t-style">3중 판정</span>은 우리 장기기억 설계에 그대로 차용할 게이트다. "검증되지 않은 스킬을 영구 저장해 오류가 누적되는" 사태는 메모리 기반 제품의 가장 치명적인 실패 모드인데, ASI는 완수·사용·상태변화의 논리곱으로 이를 입구에서 막는다. 네버마인드의 장기기억을 <strong>실행 검증을 통과한 스킬만 누적</strong>하도록 설계하면, 자연스럽게 "학습이 쌓일수록 신뢰도가 오르는 KB"라는 우리 제품의 핵심 주장이 성립한다. 절제 실험의 3.7점 격차가 바로 그 형식(실행 검증)의 중요성을 외부 근거로 뒷받침해 준다.</p>
+<div class="key-point"><p>네버마인드의 장기기억은 "정보를 많이 쌓는 KB"가 아니라 <strong>"검증 통과분만 쌓는 KB"</strong>여야 한다. ASI의 3중 판정을 메모리 입구의 게이트로 삼으면, 누적이 곧 신뢰도 상승이 된다 — 이것이 "학습이 쌓일수록 더 믿을 만해지는 KB"라는 우리 주장의 형식적 근거다. 더불어 이 논문은 <strong>Fried·Neubig 공저</strong>라, 컨택 시 CMU 두 그룹을 한 번에 커버한다.</p></div>
+</section>
+
+<section id="s7" class="prose">
+<h2>컨택 이메일 — 한 문단</h2>
+<p>연결고리를 그대로 컨택 메일의 본론으로 쓴다. 솔루션을 장황하게 설명하지 않고, "당신의 스킬 검증 형식이 내가 설계 중인 누적 메모리와 같은 구조"라는 한 문장으로 공감대를 만드는 게 핵심이다.</p>
+<div class="email-box">
+  <div class="ma-label">✉️ Email — body paragraph</div>
+  <p class="en">Your <strong>ASI</strong> work on inducing <strong>verified programmatic skills</strong> resonates strongly with my research on long-term memory knowledge bases for agents, where I'm designing <strong>nightly autonomous loops</strong> that abstract and reuse recurring task procedures — I'd love to discuss how <strong>execution-based skill verification</strong> could shape accumulative agent memory.</p>
+</div>
+</section>
+
+<nav class="ch-foot"><a href="../p7-fried-coordination/index.html"><div class="dir">← 이전</div><div class="ti">Multi-Agent Coordination — 노트북</div></a><a href="../index.html" class="next"><div class="dir">다음 →</div><div class="ti">전체 목록으로</div></a></nav>
+</main></div>
+
+<script>
+(function () {
+  /* ── scroll-progress ───────────────────────────── */
+  var prog = document.querySelector('.scroll-progress');
+  /* ── scrollspy ─────────────────────────────────── */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.ch-nav a'));
+  var sections = navLinks.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var st = window.scrollY || document.documentElement.scrollTop;
+    var docH = document.documentElement.scrollHeight - window.innerHeight;
+    if (prog) prog.style.width = (docH > 0 ? (st / docH) * 100 : 0) + '%';
+    var idx = 0, mark = st + window.innerHeight * 0.32;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i] && sections[i].offsetTop <= mark) idx = i;
+    }
+    navLinks.forEach(function (a, i) { a.classList.toggle('current', i === idx); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  /* ── KaTeX ─────────────────────────────────────── */
+  function renderMath() {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+  if (document.readyState === 'complete') renderMath();
+  else window.addEventListener('load', renderMath);
+
+  /* ════════════════════════════════════════════════
+     스킬 유도·재사용 위젯 — 검증 통과분만 누적
+     ════════════════════════════════════════════════ */
+  var RAW = [
+    { ico: '🖱️', t: "click(검색창)" },
+    { ico: '⌨️', t: "type('무선 이어폰')" },
+    { ico: '🖱️', t: "click(검색 버튼)" },
+    { ico: '⌛', t: "wait(결과 로딩)" },
+    { ico: '🖱️', t: "click(첫 결과)" },
+    { ico: '👀', t: "read(상품 상세)" },
+    { ico: '🖱️', t: "click(장바구니 담기)" },
+    { ico: '✅', t: "verify(담김 확인)" }
+  ];
+  var tape = document.getElementById('siTape');
+  var lib = document.getElementById('siLib'), emptyEl = document.getElementById('siEmpty');
+  var gate = document.getElementById('siGate'), tag = document.getElementById('siTag');
+  var c1 = document.getElementById('siC1'), c2 = document.getElementById('siC2'), c3 = document.getElementById('siC3');
+  var btnFold = document.getElementById('siFold'), btnReuse = document.getElementById('siReuse'), btnReset = document.getElementById('siReset');
+  var mSteps = document.getElementById('siSteps'), mWin = document.getElementById('siWin'), mCount = document.getElementById('siCount');
+  var skillEl = null, phase = 0, timers = [];
+
+  function clearTimers() { timers.forEach(function (t) { clearTimeout(t); }); timers = []; }
+
+  function renderTape() {
+    tape.innerHTML = '';
+    RAW.forEach(function (a, i) {
+      var d = document.createElement('div');
+      d.className = 'si-act';
+      d.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="ico">' + a.ico + '</span><span>' + a.t + '</span>';
+      tape.appendChild(d);
+      timers.push(setTimeout(function () { d.classList.add('show'); }, 70 * i));
+    });
+  }
+
+  function reset() {
+    clearTimers();
+    phase = 0; skillEl = null;
+    lib.innerHTML = ''; lib.appendChild(emptyEl); emptyEl.style.display = '';
+    gate.hidden = true;
+    c1.className = 'si-check'; c2.className = 'si-check'; c3.className = 'si-check';
+    c1.querySelector('.mk').textContent = '○'; c2.querySelector('.mk').textContent = '○'; c3.querySelector('.mk').textContent = '○';
+    tag.innerHTML = "1단계: 원시 액션 시퀀스를 봅니다. <b>'스킬로 묶기'</b>를 누르세요.";
+    btnFold.disabled = false; btnFold.textContent = '스킬로 묶기';
+    btnReuse.disabled = true;
+    mSteps.textContent = '8'; mWin.textContent = '71.0%'; mCount.textContent = '0';
+    document.querySelector('.si-meter.step').classList.remove('done');
+    document.querySelector('.si-meter.win').classList.remove('done');
+    renderTape();
+  }
+
+  function fold() {
+    if (phase !== 0) return;
+    phase = 1; clearTimers();
+    btnFold.disabled = true;
+    var acts = Array.prototype.slice.call(tape.querySelectorAll('.si-act'));
+    acts.forEach(function (a) { a.classList.add('show', 'folding'); });
+    tag.innerHTML = "2단계: 액션 묶음을 함수 <b>search_product()</b>로 추상화 → 프리픽스를 실제 실행해 검증합니다.";
+    // 스킬 카드 등장
+    timers.push(setTimeout(function () {
+      emptyEl.style.display = 'none';
+      skillEl = document.createElement('div');
+      skillEl.className = 'si-skill';
+      skillEl.innerHTML = '<div class="fn">def search_product(query):</div>'
+        + '<div class="sig">8개 원시 액션 → 1콜로 추상화 · 검색·선택·담기</div>'
+        + '<div class="badge verified" id="siBadge" style="opacity:0">⏳ 검증 중…</div>';
+      lib.insertBefore(skillEl, gate);
+      timers.push(setTimeout(function () { skillEl.classList.add('show'); }, 30));
+      gate.hidden = false;
+    }, 450));
+    // 3중 판정 순차 통과
+    timers.push(setTimeout(function () { passCheck(c1); }, 900));
+    timers.push(setTimeout(function () { passCheck(c2); }, 1350));
+    timers.push(setTimeout(function () {
+      passCheck(c3);
+      var b = document.getElementById('siBadge');
+      if (b) { b.style.opacity = '1'; b.textContent = '✓ 검증 통과 · 누적됨'; }
+      mCount.textContent = '1';
+      tag.innerHTML = "3단계: <b>3중 판정 통과</b> → 라이브러리에 누적. 통과 못 했다면 폐기됐을 겁니다. 이제 <b>재사용</b> 가능.";
+      btnReuse.disabled = false;
+      phase = 2;
+    }, 1800));
+  }
+
+  function passCheck(el) { el.classList.add('pass'); el.querySelector('.mk').textContent = '✓'; }
+
+  function reuse() {
+    if (phase !== 2) return;
+    phase = 3;
+    btnReuse.disabled = true;
+    // 스텝/성공률 카운트업
+    var badge = document.getElementById('siBadge');
+    if (badge) { badge.className = 'badge reused'; badge.textContent = '♻ 다음 과제에서 1콜로 재사용'; }
+    tag.innerHTML = "4단계: 다음 과제에서 <b>search_product()</b> 한 줄로 처리 → 스텝 8→7 (−15%), 성공률 +23.5%p.";
+    animateMetric(mSteps, 8, 7, 0, '');
+    animateMetric(mWin, 71.0, 94.5, 1, '%');
+    document.querySelector('.si-meter.step').classList.add('done');
+    document.querySelector('.si-meter.win').classList.add('done');
+  }
+
+  function animateMetric(el, from, to, dec, suf) {
+    var steps = 24, i = 0;
+    var iv = setInterval(function () {
+      i++;
+      var v = from + (to - from) * (i / steps);
+      el.textContent = (dec ? v.toFixed(dec) : Math.round(v)) + suf;
+      if (i >= steps) { clearInterval(iv); el.textContent = (dec ? to.toFixed(dec) : to) + suf; }
+    }, 30);
+  }
+
+  btnFold.addEventListener('click', fold);
+  btnReuse.addEventListener('click', reuse);
+  btnReset.addEventListener('click', reset);
+  reset();
+})();
+</script>
+</body>
+</html>

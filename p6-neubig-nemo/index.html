@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEMO — Graham Neubig</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* ── 위젯: 비대칭 검증 루프 ── */
+  .avl-stage { padding: 1.4rem 1.3rem 1.5rem; }
+  .avl-board {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch;
+    gap: .7rem; margin-bottom: 1rem;
+  }
+  .avl-node {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--paper-2);
+    padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .35rem;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .avl-node .role {
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .avl-node .name { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+  .avl-node .sub { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; }
+  .avl-node.opt.active { border-color: var(--structure); box-shadow: 0 0 0 3px var(--structure-bg); background: var(--structure-bg); }
+  .avl-node.opt.active .role { color: var(--structure); }
+  .avl-node.sim.active { border-color: var(--synth); box-shadow: 0 0 0 3px var(--synth-bg); background: var(--synth-bg); }
+  .avl-node.sim.active .role { color: var(--synth); }
+  .avl-arrow {
+    align-self: center; display: flex; flex-direction: column; align-items: center;
+    gap: .25rem; min-width: 78px;
+  }
+  .avl-arrow .glyph { font-family: var(--mono); font-size: 1.3rem; color: var(--ink-faint); transition: color .2s; }
+  .avl-arrow .glyph.on { color: var(--structure); }
+  .avl-arrow .lbl {
+    font-family: var(--mono); font-size: .6rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-faint); text-align: center; line-height: 1.3;
+  }
+  .avl-status {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--paper);
+    padding: 1rem 1.2rem; min-height: 92px; display: flex; flex-direction: column; gap: .45rem;
+  }
+  .avl-status .head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .avl-status .head .ct { color: var(--ink); font-weight: 700; }
+  .avl-status .verdict { font-size: .95rem; color: var(--ink-soft); line-height: 1.55; }
+  .avl-status .verdict b { color: var(--ink); }
+  .avl-status .verdict.fail b { color: var(--style); }
+  .avl-status .verdict.pass b { color: var(--structure); }
+  .avl-report {
+    margin-top: .15rem; padding: .7rem .9rem; border-radius: 11px;
+    background: var(--style-bg); border: 1px solid var(--style-lo);
+    font-family: var(--mono); font-size: .8rem; color: var(--ink); line-height: 1.5;
+    opacity: 0; max-height: 0; overflow: hidden; transition: opacity .25s, max-height .25s, padding .25s, margin .25s;
+  }
+  .avl-report.show { opacity: 1; max-height: 120px; }
+  .avl-report b { color: var(--style); }
+  .avl-controls { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+  .avl-controls .retry-chip {
+    font-family: var(--mono); font-size: .8rem; color: var(--ink-soft);
+    background: var(--paper-sink); border-radius: 999px; padding: .35rem .85rem;
+  }
+  .avl-controls .retry-chip b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar"><a class="home" href="../index.html">← 전체 목록</a><span class="ch-mini">PAPER 6 / 8 · Neubig</span></div>
+
+<div class="ch-layout">
+  <aside class="ch-nav"><nav><ol>
+    <li><a href="#s1" class="current">한 줄 요약</a></li>
+    <li><a href="#s2">문제와 동기</a></li>
+    <li><a href="#s3">핵심 아이디어</a></li>
+    <li><a href="#s4">주요 결과</a></li>
+    <li><a href="#s5">한계</a></li>
+    <li><a href="#s6">내 연구와의 연결</a></li>
+    <li><a href="#s7">컨택 이메일</a></li>
+  </ol></nav></aside>
+
+  <main class="ch-main">
+    <header class="ch-head">
+      <span class="kicker">Graham Neubig(마지막 저자) · 2026 · arXiv:2601.21372</span>
+      <h1>실행을 아는<br><span class="t-structure">코딩 에이전트</span></h1>
+      <p class="lede">코드를 실제로 돌려보고 결과를 되먹여 자가 교정하는 비대칭 검증 루프 — 내 야간 루프의 핵심 메커니즘과 직접 맞닿는다.</p>
+    </header>
+
+    <section id="s1" class="prose">
+      <h2>한 줄 요약</h2>
+      <p>NEMO는 "AI가 짠 코드가 실제로 돌아갈까?"라는 불안을 <strong>아키텍처 차원에서 제거</strong>한다. 자연어로 적힌 의사결정 문제를 받아, 그것을 풀 수 있는 <span class="term">자율 코딩 에이전트(autonomous coding agent, ACA)</span>가 직접 최적화 코드를 작성하고 <strong>샌드박스에서 실행</strong>한 뒤 그 결과를 되돌려받는다. 핵심은 코드를 텍스트로만 생성하는 데서 멈추지 않고, "항상 실행 가능함"을 <em>요행이 아니라 설계 전제</em>로 삼는다는 점이다.</p>
+      <p>기존 접근(OptiMUS, ORLM, Chain-of-Experts 등)이 전용 LLM 파인튜닝이나 과제별 에이전트에 기대어 취약했던 것과 달리, NEMO는 <strong>실행 검증을 일급 추상화(first-class abstraction)</strong>로 끌어올린다. 그 결과 코드가 실제로 도는지가 사후 점검이 아니라 루프의 골격 그 자체가 된다. 자동화 모델링의 신뢰도를 "운"에서 "구조"로 옮긴 것이 이 논문의 한 줄이다.</p>
+      <p><span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-faint)">메타 ·</span>
+        제목 <em>NEMO: Execution-Aware Optimization Modeling via Autonomous Coding Agents</em> ·
+        저자 Yang Song, Anoushka Vyas, Zirui Wei, Sina Khoshfetrat Pakazad, Henrik Ohlsson, Graham Neubig(마지막 저자) ·
+        2026-01 ·
+        <a href="https://arxiv.org/abs/2601.21372">abs</a> /
+        <a href="https://arxiv.org/pdf/2601.21372">PDF</a></p>
+    </section>
+
+    <section id="s2" class="prose">
+      <h2>문제와 동기</h2>
+      <p>자연어 의사결정 문제를 풀려면 그것을 수학적 최적화 모델(목적함수, 결정변수, 제약식)로 옮긴 뒤 솔버로 풀어야 한다. 이 번역을 LLM에게 맡기는 연구가 쏟아졌지만, 거의 모두가 같은 함정에 빠진다. <strong>LLM이 코드를 텍스트로 써 내려가는 순간, 그 코드가 실제로 도는지는 아무도 보장하지 않는다.</strong> 문법은 그럴듯한데 솔버에 넣으면 변수 정의가 빠지거나 제약이 모순되거나, 그냥 죽는다.</p>
+      <p>기존 방법들은 이 빈틈을 <strong>모델 자체의 똑똑함</strong>으로 메우려 했다. 전용 LLM을 파인튜닝하거나, 과제별로 정교하게 짠 에이전트 파이프라인을 쌓는 식이다. 그러나 이 접근은 본질적으로 취약하다. 학습 분포를 조금만 벗어나면 무너지고, 무엇보다 <strong>실행 불가능한 코드를 자주 생성</strong>한다. 똑똑함을 키워 봤자 "검증이 없다"는 구조적 결함은 그대로 남는다.</p>
+      <div class="analogy">
+        <b>눈 감고 쏘는 사수와 표적지의 비유.</b> 기존 방법은 명사수를 더 정밀하게 훈련시키는 데 매달렸다. 하지만 아무리 잘 훈련된 사수라도 <em>표적이 어디 맞았는지 보지 못하면</em> 다음 발을 교정할 수 없다. NEMO는 사수의 솜씨를 키우는 대신, 모든 발사 뒤에 표적지를 보여 주고 빗나간 위치를 알려 주는 <strong>피드백 회로</strong>를 사격장에 못 박는다. 명중률은 사수가 아니라, 결과를 보고 다시 쏘게 만드는 구조에서 나온다.</p>
+      </div>
+      <p>그래서 NEMO의 동기는 분명하다. "더 똑똑한 모델"이 아니라 <strong>"실행 결과를 항상 되돌려받는 구조"</strong>로 검증 부재 문제를 정면에서 없애는 것 — 코드가 도는지를 사후에 기도하는 대신, 도는 것을 봐야만 다음으로 넘어가게 만드는 것이다.</p>
+    </section>
+
+    <div class="widget">
+      <div class="widget-frame">
+        <div class="widget-label"><span class="lab-no">위젯 01</span><span>비대칭 검증 루프 — 옵티마이저와 시뮬레이터의 자가 교정</span></div>
+        <div class="avl-stage">
+          <div class="avl-board">
+            <div class="avl-node opt" id="avlOpt">
+              <div class="role">Optimizer · 생성</div>
+              <div class="name">옵티마이저</div>
+              <div class="sub">문제를 받아 최적화 코드를 작성한다. 매 시도마다 가설을 새로 세운다.</div>
+            </div>
+            <div class="avl-arrow">
+              <div class="glyph" id="avlArrFwd">→</div>
+              <div class="lbl">코드 제출</div>
+              <div class="glyph" id="avlArrBack" style="font-size:1.05rem;">↩</div>
+              <div class="lbl">오류 리포트 주입</div>
+            </div>
+            <div class="avl-node sim" id="avlSim">
+              <div class="role">Simulator · 채점</div>
+              <div class="name">시뮬레이터</div>
+              <div class="sub">코드를 샌드박스에서 실행해 통과·실패를 판정하는 고정 기준점.</div>
+            </div>
+          </div>
+          <div class="avl-status">
+            <div class="head"><span id="avlPhase">대기 중</span><span>재시도 <span class="ct" id="avlCount">0</span>회</span></div>
+            <div class="verdict" id="avlVerdict">‘실행’을 누르면 옵티마이저가 코드를 짜고, 시뮬레이터가 돌려 본다. 통과할 때까지 오류를 되먹여 다시 쓴다.</div>
+            <div class="avl-report" id="avlReport"></div>
+          </div>
+          <div class="widget-controls" style="border:none;padding:0;background:none;margin-top:1rem;">
+            <div class="avl-controls">
+              <button class="btn ghost" id="avlRun">실행</button>
+              <button class="btn ghost" id="avlReset">초기화</button>
+              <span class="retry-chip">총 실행 검증 <b id="avlTotal">0</b>회</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="widget-cap">‘실행’을 누르면 한 사이클이 진행된다 — 옵티마이저(코드 생성) → 시뮬레이터(샌드박스 채점) → 실패 → 오류 리포트를 옵티마이저 컨텍스트에 주입 → 재시도. 통과할 때까지 재시도 카운트가 오른다. 채점기(시뮬레이터)는 고정된 비대칭 기준점이라 옵티마이저만 바뀌고, 실행 검증을 설계 전제로 삼은 덕에 마지막 결과는 <b>항상 실행 가능</b>하다.</p>
+    </div>
+
+    <section id="s3" class="prose">
+      <h2>핵심 아이디어</h2>
+      <p>NEMO의 출발점은 <span class="term">자율 코딩 에이전트(ACA)</span>를 <strong>"LLM의 실행 가능한 대응물"</strong>로 재정의한 것이다. 평범한 LLM은 명세를 받으면 텍스트를 돌려준다. ACA는 명세를 받으면 <strong>코드와 실행 트레이스와 실제 결과</strong>를 돌려준다. 즉 ACA를 함수처럼 호출 가능한 일급 추상화로 보고, 그 호출의 반환값에 "실행됐다"는 사실을 못 박아 넣는다. 구현은 OpenHands 위에 얹혀 있고, ACA의 코딩 모델로는 Claude 3.7 Sonnet을, 상위 추론(meta-reasoning)에는 o3를 쓴다.</p>
+      <p>이 토대 위에 네 가지 패턴이 포개진다. 가장 중요한 것이 <strong>비대칭 검증 루프(asymmetric verification loop)</strong>다. 시뮬레이터를 <em>고정된 기준점</em>으로 두고, 옵티마이저가 낸 코드가 통과하지 못하면 그 <strong>오류 리포트를 옵티마이저의 컨텍스트에 주입</strong>해 다시 쓰게 한다. 채점하는 쪽은 그대로, 푸는 쪽만 학습하는 비대칭이 자가 교정을 만든다.</p>
+      <div class="analogy">
+        <b>학생과 채점기의 비유.</b> 답안을 내는 학생(옵티마이저)과 채점만 하는 채점기(시뮬레이터)를 분리한다. 채점기는 답을 대신 풀어 주지 않는다. 다만 <em>어디가 틀렸는지</em>를 정확히 짚어 줄 뿐이다. 학생은 그 지적을 읽고 같은 문제를 다시 푼다. 채점 기준이 고정돼 있기에, 학생의 풀이가 통과했다면 그것은 진짜 맞은 것이다 — 채점기에 맞춰 답을 흐릿하게 둘러댈 수 없다.</p>
+      </div>
+      <p>나머지 세 패턴은 이 루프의 성공률을 끌어올린다. <strong>외부 메모리</strong>는 벡터스토어에서 <em>관련성과 다양성</em>을 함께 따져 과거 풀이를 few-shot 예시로 재사용한다. <strong>MBR 디코딩</strong>은 후보 $n{=}5$개를 뽑아 그중 상위 $q{=}3$개를 추린다. <strong>자기 일관성(self-consistency)</strong>은 온도 $T{=}3$로 병렬 생성한 답들을 계층적으로 합의시킨다. 형식적으로, 최종 선택은 후보 집합 위에서 합의 점수를 최대화하는 답이다.</p>
+      <div class="math-block">$$ \hat{y} \;=\; \arg\max_{y \in \mathcal{C}} \; \sum_{y' \in \mathcal{C}} \mathrm{sim}\bigl(y,\,y'\bigr) $$</div>
+      <p class="math-note">$\mathcal{C}$ = 옵티마이저가 생성한 후보 코드/해의 집합, $\mathrm{sim}$ = 두 해의 일치도. 가장 많은 다른 후보와 일치하는 답을 고르는 것이 자기 일관성의 골자다 — 외톨이 답보다 여러 경로가 수렴한 답을 신뢰한다.</p>
+      <p>이 네 패턴이 함께 작동하면, ACA는 단발성 생성기가 아니라 <strong>실행 결과로 자신을 다듬는 닫힌 회로</strong>가 된다. 검증이 루프 바깥의 사후 점검이 아니라 루프 안의 골격이라는 점이 NEMO 설계의 정수다.</p>
+    </section>
+
+    <section id="s4" class="prose">
+      <h2>주요 결과</h2>
+      <p>NEMO는 9개 벤치마크 다수에서 SOTA를 기록한다. 가장 인상적인 폭은 어려운 벤치마크에서 나온다. <strong>NL4OPT 98.4%</strong>(+2.5pp), <strong>OptiBench 90.4%</strong>(+8.1pp), 그리고 <strong>OptMATH 65.7%</strong>(+19.9pp)다. 마지막 수치가 핵심이다 — 어려운 문제일수록 "코드를 실제로 돌려 보고 고친다"는 구조의 이득이 커진다. 텍스트만으로는 잡히지 않던 실행 오류를 루프가 걸러 내기 때문이다.</p>
+      <div class="key-point">
+        <p>다만 NEMO가 전 벤치를 석권한 것은 <strong>아니다</strong>. <strong>MAMO-Easy 83.4%</strong>, <strong>Complex 72.0%</strong>는 비교 대상인 SIRL(각각 <strong>95.3% / 94.0%</strong>)에 분명히 열세다. 실행 검증 루프가 만능 우위는 아니며, 특정 분포에서는 전용 강화학습 접근이 여전히 더 강하다는 솔직한 신호다.</p>
+      </div>
+      <p>품질 관리(QC) 측면에서도 견고하다. 자동 생성된 해 중 QC 통과 후 <strong>retention 87.3%</strong>가 남는다. 즉 루프가 만들어 낸 답의 대다수가 사후 점검까지 견딘다는 뜻으로, "실행은 됐지만 엉터리"인 해를 걸러 내는 능력까지 갖췄음을 보여 준다. 종합하면 NEMO의 강점은 평균 점수보다 <strong>어려운 문제에서의 견고함</strong>과 <strong>실행 가능성의 보장</strong>에 있다.</p>
+    </section>
+
+    <section id="s5" class="prose">
+      <h2>한계</h2>
+      <p>가장 현실적인 한계는 <strong>비용</strong>이다. ACA 루프가 코드를 짜고 실행하고 고치기를 반복하므로, 인스턴스 하나당 <strong>5-10분</strong>이 걸린다. 빠른 응답이 필요한 고처리량(high-throughput) 환경에는 그대로 쓰기 어렵다. 실행 검증이 주는 신뢰도는 공짜가 아니라 시간으로 지불된다.</p>
+      <p>둘째, 입력 문제 자체가 모호하면 루프도 구할 수 없다. <strong>IndustryOR 벤치에서 실패의 42%가 "잘못되거나 누락된 제약"</strong>에서 비롯됐다. 실행 검증은 코드가 도는지를 보장하지만, 문제가 처음부터 잘못 적혀 있으면 "잘 도는 틀린 모델"을 만들 뿐이다 — 검증은 명세의 진실성까지 책임지지 못한다.</p>
+      <div class="pitfall">
+        <p>NEMO의 우위를 "통계적으로 입증된 일반 우위"로 읽지 말 것. <strong>ACA 루프가 비싸서 충분한 반복 실험을 돌리지 못해, 통계적 유의성이 보고되지 않았다.</strong> 또한 MAMO에서의 열세가 보여 주듯, 결과는 벤치마크 분포에 민감하다. "항상 실행 가능"은 보장이지만 "항상 최고 성능"은 아니다.</p>
+      </div>
+    </section>
+
+    <section id="s6" class="prose">
+      <h2>내 연구와의 연결</h2>
+      <p>이 논문이 내 작업에 직접 닿는 지점은 <strong>비대칭 검증 루프</strong>다. 실행 결과를 되먹여 옵티마이저가 자기 코드를 고치는 이 구조는, 내가 설계한 <strong>야간 루프(night loop)</strong>의 핵심 메커니즘과 사실상 같은 골격이다. 야간 루프 역시 행동의 실제 실행 피드백을 받아 다음 행동을 자가 조정한다 — "생성하고 끝"이 아니라 "실행하고 고친다"는 닫힌 회로라는 점에서 NEMO와 한 계보에 선다.</p>
+      <p>더 큰 시사점은 ACA를 <strong>"API처럼 호출되는 일급 추상화"</strong>로 본 관점이다. NEMO에서 ACA의 반환값에는 "실행됐다"는 사실이 박혀 있고, 외부 메모리는 단순 사실이 아니라 <em>과거에 실제로 통한 풀이 경험</em>을 적재해 재사용한다. 이것은 내 지식 기반(KB)의 방향을 정확히 뒷받침한다.</p>
+      <div class="key-point">
+        <p>내 KB는 단순 사실 저장소를 넘어 <strong>"실행 가능한 경험(executable experience)"</strong>을 적재해야 한다. 무엇을 알았는지가 아니라, 어떤 행동이 실제로 통했고 무엇이 실패했는지를 기억해야 다음 루프가 그 경험을 호출해 자가 교정할 수 있다. NEMO의 외부 메모리가 바로 그 증거다.</p>
+        <p>실무적으로도 직접 참고점이 된다. NEMO의 벡터스토어 검색이 <strong>관련성과 다양성</strong>을 함께 따지는 방식은, BookLive의 RAG 파이프라인과 네버마인드 KB의 검색 설계에 그대로 적용할 수 있는 구체적 레시피다 — 가장 비슷한 것만 뽑으면 편향되고, 다양성을 섞어야 새 상황에 일반화된다.</p>
+      </div>
+    </section>
+
+    <section id="s7" class="prose">
+      <h2>컨택 이메일</h2>
+      <p>Fall 2027 대학원 지원을 염두에 두고 Graham Neubig 교수께 보낼 컨택 초안의 핵심 문단이다. 논문의 핵심 기여(실행 기반 ACA + 외부 메모리)를 내가 만들고 있는 시스템과 한 호흡으로 연결한다.</p>
+      <div class="key-point">
+        <p style="font-family:var(--mono);font-size:.9rem;line-height:1.7;">Your framing of autonomous coding agents as a first-class, API-like abstraction with execution-grounded external memory in NEMO closely mirrors what I am building—a long-term knowledge base that stores executable experience for self-correcting nightly agent loops.</p>
+      </div>
+    </section>
+
+    <nav class="ch-foot">
+      <a href="../p5-neubig-agentcompany/index.html"><div class="dir">← 이전</div><div class="ti">TheAgentCompany — 24%</div></a>
+      <a href="../p7-fried-coordination/index.html" class="next"><div class="dir">다음 →</div><div class="ti">Multi-Agent Coordination — 노트북</div></a>
+    </nav>
+  </main>
+</div>
+
+<script>
+  // ── scroll-progress ──
+  const progress = document.querySelector('.scroll-progress');
+  function updateProgress() {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    progress.style.transform = 'scaleX(' + (scrolled || 0) + ')';
+  }
+  document.addEventListener('scroll', updateProgress, { passive: true });
+  updateProgress();
+
+  // ── scrollspy ──
+  const navLinks = Array.from(document.querySelectorAll('.ch-nav a'));
+  const sections = navLinks.map(a => document.querySelector(a.getAttribute('href')));
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = '#' + e.target.id;
+        navLinks.forEach(a => a.classList.toggle('current', a.getAttribute('href') === id));
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+  sections.forEach(s => s && spy.observe(s));
+
+  // ── KaTeX ──
+  window.addEventListener('load', () => {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ]
+      });
+    }
+  });
+
+  // ── 위젯: 비대칭 검증 루프 ──
+  (function () {
+    const opt     = document.getElementById('avlOpt');
+    const sim     = document.getElementById('avlSim');
+    const arrFwd  = document.getElementById('avlArrFwd');
+    const arrBack = document.getElementById('avlArrBack');
+    const phaseEl = document.getElementById('avlPhase');
+    const countEl = document.getElementById('avlCount');
+    const totalEl = document.getElementById('avlTotal');
+    const verdict = document.getElementById('avlVerdict');
+    const report  = document.getElementById('avlReport');
+    const btnRun  = document.getElementById('avlRun');
+    const btnReset= document.getElementById('avlReset');
+
+    // 통과 전까지 누적되는 실패 시나리오. 4번째 사이클에서 통과.
+    const FAILS = [
+      { msg: '제약식 누락 — 수요 ≥ 공급 조건이 모델에 빠짐. <b>InfeasibleError</b>', fix: '누락된 수요 제약을 추가해 재작성' },
+      { msg: '결정변수 미정의 — x[i,j] 인덱스가 선언되지 않음. <b>NameError</b>', fix: '인덱스 집합과 변수를 먼저 선언하도록 수정' },
+      { msg: '목적함수 부호 오류 — 최소화여야 할 비용을 최대화. <b>WrongObjective</b>', fix: '목적 방향을 minimize로 교정' }
+    ];
+
+    let retries = 0;     // 이번 문제에서의 재시도 횟수
+    let total = 0;       // 누적 실행 검증 횟수 (리셋 전까지)
+    let stage = 0;       // 0=대기, 진행 중이면 잠금
+    let running = false;
+    let solved = false;
+
+    function clearActive() {
+      opt.classList.remove('active'); sim.classList.remove('active');
+      arrFwd.classList.remove('on');
+    }
+    function setPhase(t) { phaseEl.textContent = t; }
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function runCycle() {
+      if (running || solved) return;
+      running = true;
+      btnRun.disabled = true;
+      report.classList.remove('show');
+
+      // 1) 옵티마이저: 코드 생성
+      clearActive();
+      opt.classList.add('active');
+      setPhase('옵티마이저 · 코드 생성');
+      verdict.className = 'verdict';
+      verdict.innerHTML = '옵티마이저가 명세를 읽고 최적화 코드를 작성한다…';
+      await wait(700);
+
+      // 2) 코드 제출 → 시뮬레이터
+      arrFwd.classList.add('on');
+      await wait(450);
+      opt.classList.remove('active');
+      sim.classList.add('active');
+      setPhase('시뮬레이터 · 샌드박스 실행');
+      verdict.innerHTML = '시뮬레이터가 코드를 샌드박스에서 실행해 채점한다…';
+      await wait(750);
+
+      total += 1; totalEl.textContent = total;
+
+      const failIdx = retries; // 0,1,2 실패 → 3에서 통과
+      if (failIdx < FAILS.length) {
+        // 실패: 오류 리포트 주입
+        const f = FAILS[failIdx];
+        verdict.className = 'verdict fail';
+        verdict.innerHTML = '<b>실패.</b> 시뮬레이터가 실행 오류를 반환했다.';
+        report.innerHTML = '↩ 오류 리포트 주입 → ' + f.msg + '<br>→ ' + f.fix;
+        report.classList.add('show');
+        setPhase('실패 · 오류 리포트 주입');
+        arrBack.style.color = 'var(--style)';
+        await wait(550);
+        retries += 1; countEl.textContent = retries;
+        clearActive();
+        arrBack.style.color = '';
+        verdict.className = 'verdict';
+        verdict.innerHTML = '오류 리포트가 옵티마이저 컨텍스트에 주입됐다. ‘실행’을 다시 눌러 재시도하라.';
+        setPhase('재시도 대기');
+        btnRun.textContent = '재시도';
+      } else {
+        // 통과
+        verdict.className = 'verdict pass';
+        verdict.innerHTML = '<b>통과.</b> 코드가 실행에 성공하고 해가 검증됐다. 실행 검증을 전제로 삼은 덕에 최종 산출물은 항상 실행 가능하다.';
+        setPhase('통과 · 검증 완료');
+        clearActive();
+        sim.classList.add('active');
+        solved = true;
+        btnRun.textContent = '완료';
+        btnRun.disabled = true;
+      }
+      running = false;
+      if (!solved) btnRun.disabled = false;
+    }
+
+    function reset() {
+      retries = 0; total = 0; stage = 0; running = false; solved = false;
+      countEl.textContent = '0'; totalEl.textContent = '0';
+      clearActive();
+      report.classList.remove('show'); report.innerHTML = '';
+      verdict.className = 'verdict';
+      verdict.innerHTML = '‘실행’을 누르면 옵티마이저가 코드를 짜고, 시뮬레이터가 돌려 본다. 통과할 때까지 오류를 되먹여 다시 쓴다.';
+      setPhase('대기 중');
+      btnRun.textContent = '실행'; btnRun.disabled = false;
+    }
+
+    btnRun.addEventListener('click', runCycle);
+    btnReset.addEventListener('click', reset);
+    reset();
+  })();
+</script>
+</body>
+</html>

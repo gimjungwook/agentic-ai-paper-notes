@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Future of Work with AI Agents — Diyi Yang</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* ── 위젯: HAS H1-H5 개입 경계 슬라이더 ── */
+  .has-stage { padding: 1.4rem 1.3rem 1.5rem; }
+  .has-spectrum {
+    position: relative; height: 56px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(90deg, var(--structure) 0%, #6EA8F8 28%, var(--synth) 50%, #F3786C 72%, var(--style) 100%);
+    margin-bottom: .35rem;
+  }
+  .has-spectrum .ends {
+    position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 .9rem; font-family: var(--mono); font-size: .68rem; letter-spacing: .12em;
+    color: #fff; text-transform: uppercase; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .has-spectrum .marker {
+    position: absolute; top: -4px; bottom: -4px; width: 4px; border-radius: 3px;
+    background: var(--ink); box-shadow: 0 0 0 3px var(--paper-2), 0 2px 8px rgba(0,0,0,.3);
+    transform: translateX(-50%); transition: left .18s var(--ease);
+  }
+  .has-ticks { display: flex; justify-content: space-between; margin: .1rem .2rem .9rem; }
+  .has-ticks span {
+    font-family: var(--mono); font-size: .7rem; color: var(--ink-faint);
+    width: 20%; text-align: center; transition: color .15s, font-weight .15s;
+  }
+  .has-ticks span.on { color: var(--ink); font-weight: 700; }
+  .has-readout {
+    display: grid; grid-template-columns: auto 1fr; gap: .2rem 1rem; align-items: baseline;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 1rem 1.2rem; margin-top: 1rem;
+  }
+  .has-readout .lvl {
+    font-family: var(--mono); font-size: 1.5rem; font-weight: 700; grid-row: span 3; align-self: center;
+  }
+  .has-readout .mode { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+  .has-readout .ttl { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+  .has-readout .desc { font-size: .9rem; color: var(--ink-soft); line-height: 1.55; grid-column: 2; }
+  .has-flag {
+    margin-top: .9rem; padding: .8rem 1rem; border-radius: 12px;
+    background: var(--style-bg); border: 1px solid var(--style-lo);
+    font-size: .88rem; color: var(--ink); line-height: 1.55;
+    opacity: 0; max-height: 0; overflow: hidden; transition: opacity .25s, max-height .25s, padding .25s, margin .25s;
+  }
+  .has-flag.show { opacity: 1; max-height: 200px; }
+  .has-flag b { color: var(--style); }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar"><a class="home" href="../index.html">← 전체 목록</a><span class="ch-mini">PAPER 3 / 8 · Yang</span></div>
+
+<div class="ch-layout">
+  <aside class="ch-nav"><nav><ol>
+    <li><a href="#s1" class="current">한 줄 요약</a></li>
+    <li><a href="#s2">문제와 동기</a></li>
+    <li><a href="#s3">핵심 아이디어</a></li>
+    <li><a href="#s4">주요 결과</a></li>
+    <li><a href="#s5">한계</a></li>
+    <li><a href="#s6">내 연구와의 연결</a></li>
+    <li><a href="#s7">컨택 이메일</a></li>
+  </ol></nav></aside>
+
+  <main class="ch-main">
+    <header class="ch-head">
+      <span class="kicker">Diyi Yang · Stanford SALT Lab · 2025 · arXiv:2506.06576</span>
+      <h1>노동자는 무엇을<br><span class="t-style">자동화하길 원하는가</span></h1>
+      <p class="lede">Human Agency Scale — "AI가 어디까지 개입하고 언제 물러나야 하는가"를 5단계로 정량화. 내 '추천하되 결정은 사용자' 설계의 데이터 근거.</p>
+    </header>
+
+    <section id="s1" class="prose">
+      <h2>한 줄 요약</h2>
+      <p>이 논문은 질문의 방향을 뒤집는다. AI 에이전트(AI agent) 논의는 거의 전부 <strong>"무엇이 기술적으로 자동화 가능한가"</strong>라는 공급측 질문에 매달려 왔다. Shao 등은 그 위에 정반대의 질문을 포갠다 — <strong>"그 일을 실제로 하는 노동자는 무엇을 자동화하길 <em>원하는가</em>"</strong>. 미국 노동자 1,500여 명을 대상으로 오디오를 곁들인 미니 인터뷰를 돌리고, 그들의 욕구를 <span class="term">Human Agency Scale(HAS)</span>이라는 5단계 척도로 환산해 노동시장 전체를 감사(audit)한다.</p>
+      <p>핵심 발견은 단순하면서도 묵직하다. 노동자들은 무조건적인 자동화를 원하지 않는다. <strong>절반에 가까운 과제에서 노동자는 AI 전문가가 필요하다고 본 것보다 <em>더 높은</em> 인간 개입을 요구</strong>했고, 가장 선호된 협업 형태는 'AI가 다 한다'도 'AI가 손도 못 댄다'도 아닌 <strong>동등한 파트너십(H3)</strong>이었다. 자동화의 천장은 기술이 아니라 사람의 욕구가 먼저 정한다는 이야기다.</p>
+      <p><span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-faint)">메타 ·</span>
+        제목 <em>Future of Work with AI Agents: Auditing Automation and Augmentation Potential across the U.S. Workforce</em> ·
+        저자 Yijia Shao, Humishka Zope, Yucheng Jiang, Jiaxin Pei, David Nguyen, Erik Brynjolfsson, Diyi Yang ·
+        Stanford · 2025 ·
+        <a href="https://arxiv.org/abs/2506.06576">abs</a> /
+        <a href="https://arxiv.org/pdf/2506.06576">PDF</a></p>
+    </section>
+
+    <section id="s2" class="prose">
+      <h2>문제와 동기</h2>
+      <p>AI 에이전트가 노동을 어떻게 바꿀지를 둘러싼 담론은 한쪽으로 심하게 기울어 있다. 벤치마크, 능력 평가, "이 직무의 몇 퍼센트가 자동화 가능한가" 식의 추정 — 거의 전부가 <strong>공급측(supply-side)</strong> 질문이다. 즉 "기술이 어디까지 할 수 있는가"만 묻는다. 정작 그 일을 매일 수행하는 노동자가 <strong>무엇을 넘기고 싶고 무엇을 손에 쥐고 있고 싶은지</strong>는 체계적으로 측정된 적이 없다.</p>
+      <p>저자들은 이 공백이 두 가지 값비싼 실패로 이어진다고 본다. 첫째는 <strong>원치 않는 과잉 자동화</strong> — 노동자가 의미와 통제감을 느끼던 일까지 기계에 넘겨, 주체성(agency)을 잃게 만드는 실패다. 둘째는 그 반대인 <strong>기회 손실</strong> — 노동자는 떠넘기고 싶어 죽겠는데 기술이 아직 못 따라가, 정작 풀어야 할 고통점이 방치되는 실패다. 두 실패 모두 "역량"만 보고 "욕구"를 안 봤기 때문에 생긴다.</p>
+      <div class="analogy">
+        <b>지도와 나침반의 비유.</b> 공급측 분석은 "어디까지 길이 뚫려 있는가"를 그린 지도다. 그러나 길이 뚫렸다고 그쪽으로 가야 하는 것은 아니다. 어느 방향으로 <em>가고 싶은지</em>를 가리키는 나침반이 빠지면, 가장 빨리 뚫린 길이 곧 가야 할 길이라고 착각하게 된다. 이 논문은 노동시장이라는 지형에 비로소 나침반 — 노동자의 욕구 — 을 얹는다.
+      </div>
+      <p>그래서 필요한 것은 <strong>욕구(desire)와 역량(capability)을 한 평면에서 동시에 보는 감사 프레임</strong>이다. 무엇을 자동화하고 싶은지, 그리고 자동화하더라도 인간이 어느 단계까지 손을 대고 있어야 하는지 — 이 둘을 정량화해야 비로소 "어디부터 자동화할까"라는 우선순위 질문에 데이터로 답할 수 있다.</p>
+    </section>
+
+    <div class="widget">
+      <div class="widget-frame">
+        <div class="widget-label"><span class="lab-no">위젯 01</span><span>Human Agency Scale — 개입 경계 슬라이더</span></div>
+        <div class="has-stage">
+          <div class="has-spectrum">
+            <div class="marker" id="hasMarker"></div>
+            <div class="ends"><span>← 자동화 AUTOMATION</span><span>증강 AUGMENTATION →</span></div>
+          </div>
+          <div class="has-ticks" id="hasTicks">
+            <span data-h="1">H1</span><span data-h="2">H2</span><span data-h="3">H3</span><span data-h="4">H4</span><span data-h="5">H5</span>
+          </div>
+          <div class="widget-controls" style="border:none;padding:0;background:none;">
+            <div class="slider" style="min-width:240px;">
+              <label>개입 단계 <b id="hasLab">H1 · AI 단독</b></label>
+              <input type="range" id="hasRange" min="1" max="5" step="1" value="1">
+            </div>
+            <button class="btn ghost" id="hasH3">H3로 점프 (노동자 최선호)</button>
+          </div>
+          <div class="has-readout">
+            <div class="lvl" id="hasLvl" style="color:var(--structure)">H1</div>
+            <div class="mode" id="hasMode" style="color:var(--structure)">자동화 구간</div>
+            <div class="ttl" id="hasTtl">AI 단독 수행</div>
+            <div class="desc" id="hasDesc">사람의 입력 없이 AI가 과제를 처음부터 끝까지 처리한다. 인간은 결과만 받는다.</div>
+          </div>
+          <div class="has-flag" id="hasFlag">
+            <b>동등 파트너십.</b> H3은 노동자가 가장 선호한 형태다 — 조사된 직종의 <b>45.2%</b>가 이 단계를 최선호로 꼽았다. AI가 절반을 끌고, 사람이 나머지 절반의 판단을 쥔다.
+          </div>
+        </div>
+      </div>
+      <p class="widget-cap">슬라이더를 H1(AI 단독)에서 H5(인간 지속 관여 필수)로 옮기면 스펙트럼 마커가 '자동화'에서 '증강' 쪽으로 미끄러진다. H1-H2는 자동화, H3-H5는 증강 구간이다. H3에 닿으면 노동자 최선호(45.2%) 하이라이트가 뜬다 — HAS가 정의하는 개입 경계를 손으로 체감하는 위젯이다.</p>
+    </div>
+
+    <section id="s3" class="prose">
+      <h2>핵심 아이디어</h2>
+      <p>방법론은 두 축으로 짜여 있다. 첫째, <strong>오디오를 강화한 미니 인터뷰</strong>로 노동자의 욕구를 직접 포착한다. 단순 객관식이 아니라 음성 응답을 섞어, "이 일을 AI에 넘기고 싶은가"라는 미묘한 감정까지 끌어낸다. 둘째, 그 욕구를 <span class="term">Human Agency Scale(HAS)</span>이라는 5단계 척도로 환산해 <strong>"이 과제에서 인간이 어느 정도 개입해야 하는가"</strong>를 정량화한다.</p>
+      <p>HAS의 다섯 단계는 한쪽 끝의 완전 자동화에서 반대쪽 끝의 필수 인간 관여로 이어진다.</p>
+      <table class="compare-tbl">
+        <thead><tr><th>단계</th><th>의미</th><th>구간</th></tr></thead>
+        <tbody>
+          <tr><td>H1</td><td>AI 단독 — 사람 입력 없이 과제 전체를 수행</td><td><span class="t-structure">자동화</span></td></tr>
+          <tr><td>H2</td><td>최소 입력 — AI 주도, 사람은 최소한의 정보만 보탬</td><td><span class="t-structure">자동화</span></td></tr>
+          <tr><td>H3</td><td>동등 파트너 — AI와 사람이 절반씩 끌고 감</td><td><span class="t-synth">증강</span></td></tr>
+          <tr><td>H4</td><td>인간 입력 필수 — 사람의 판단 없이는 진행 불가</td><td><span class="t-style">증강</span></td></tr>
+          <tr><td>H5</td><td>지속 관여 필수 — 사람이 전 과정에 계속 붙어 있어야 함</td><td><span class="t-style">증강</span></td></tr>
+        </tbody>
+      </table>
+      <p>핵심 분할선은 H2와 H3 사이에 있다. <strong>H1-H2는 자동화(automation)</strong>, 즉 사람을 일에서 빼내는 방향이고, <strong>H3-H5는 증강(augmentation)</strong>, 즉 사람의 능력을 키우는 방향이다. 같은 "AI 도입"이라도 어느 단계를 겨냥하느냐에 따라 노동의 의미가 정반대로 갈린다. 형식적으로는 한 과제의 적정 개입 수준을 $H^* \in \{1,2,3,4,5\}$로 두고, 노동자가 원하는 값과 전문가가 추정한 값을 비교한다.</p>
+      <div class="math-block">$$ \Delta H \;=\; H^{*}_{\text{worker}} \;-\; H^{*}_{\text{expert}} $$</div>
+      <p class="math-note">$H^{*}_{\text{worker}}$ = 노동자가 원하는 개입 단계, $H^{*}_{\text{expert}}$ = AI 전문가가 필요하다고 본 단계. $\Delta H > 0$이면 노동자가 전문가보다 더 강한 인간 개입을 원한다는 뜻 — 이 논문이 47.5%의 과제에서 관측한 신호다.</p>
+      <p>이 척도를 실제 노동시장에 입히기 위해, 저자들은 미국 노동부의 직무 분류 체계 O*NET 위에 <strong>WORKBank</strong>라는 데이터셋을 세운다. <strong>844개 과제 · 104개 직종 · 노동자 1,500여 명 · AI 전문가 52명</strong>을 묶어, 과제 단위로 "얼마나 원하는가(욕구)"와 "얼마나 가능한가(역량)"를 동시에 기록한 지도다.</p>
+    </section>
+
+    <section id="s4" class="prose">
+      <h2>주요 결과</h2>
+      <p>WORKBank를 욕구(y축)와 역량(x축)의 2차원 평면에 펼치면 과제들이 네 구역으로 갈린다. 욕구도 높고 역량도 높으면 <strong>청신호 구역(Green Light)</strong> — 지금 바로 밀어붙일 만한 자동화 후보다. 욕구는 낮은데 역량만 높으면 <strong>적신호 구역(Red Light)</strong> — 할 수는 있지만 노동자가 원치 않는, 과잉 자동화의 위험지대다. 욕구는 높은데 역량이 못 따르면 <strong>R&D 기회 구역</strong>, 둘 다 낮으면 <strong>저우선순위 구역</strong>이다.</p>
+      <p>전반적으로 노동자들은 자동화에 호의적이었다. <strong>46.1%의 과제</strong>가 긍정적 태도를 받았고, 그 동기의 압도적 다수(<strong>69.38%</strong>)는 "지루하고 반복적인 일을 덜고 <strong>고가치 업무에 쓸 시간을 확보</strong>하고 싶다"였다. 즉 노동자는 일에서 도망치려는 게 아니라, 더 가치 있는 일에 집중하려고 자동화를 원한다.</p>
+      <div class="key-point">
+        <p>그러나 가장 중요한 발견은 욕구의 <strong>방향</strong>이 아니라 개입의 <strong>깊이</strong>에 있다. <strong>47.5%의 과제에서 노동자는 AI 전문가가 필요하다고 본 것보다 더 높은 인간 개입(HAS)을 원했다.</strong> 자동화하더라도 사람이 더 깊이 손대고 있기를 바란 것이다.</p>
+        <p>그리고 직종의 <strong>45.2%가 H3(동등 파트너십)을 최선호</strong>로 꼽았다. 노동자가 그리는 미래는 "AI가 대체한 미래"가 아니라 "AI와 나란히 일하는 미래"다.</p>
+      </div>
+      <p>저항이 가장 강한 영역은 <strong>예술·디자인·미디어</strong>였다 — 긍정 태도가 단 <strong>17.1%</strong>에 그쳤다. 창작처럼 정체성과 깊이 얽힌 일일수록 사람들은 손을 놓지 않으려 한다. 한편 AI가 노동을 바꾸면서 인간에게 요구되는 핵심 역량은 <strong>정보 처리에서 대인·조직 능력으로</strong> 무게중심이 옮겨갔다. 기계가 정보를 다루는 만큼, 사람의 값어치는 사람을 다루는 쪽으로 이동한다.</p>
+      <p>마지막으로 산업의 현실과 노동자의 욕구 사이의 어긋남이 드러난다. 분석된 <strong>YC(Y Combinator) 스타트업의 41%</strong>가 적신호 또는 저우선순위 구역에 매핑됐다. 다시 말해, 투자가 몰리는 자동화 제품의 상당수가 정작 노동자가 원하지 않거나 가치를 못 느끼는 일을 겨냥하고 있다는 뜻이다.</p>
+    </section>
+
+    <section id="s5" class="prose">
+      <h2>한계</h2>
+      <p>이 연구의 힘은 동시에 그 한계의 출처이기도 하다. 첫째, 분석이 <strong>기존 O*NET 과제 목록에 묶여</strong> 있어, AI가 새로 만들어 낼 <em>신규 과제</em>는 잡지 못한다. 미래의 노동은 기존 과제의 재분배만이 아니라 전에 없던 과제의 등장이기도 한데, 그 부분은 이 지도에 빈칸으로 남는다.</p>
+      <p>둘째, <strong>104개 직종</strong>이라는 표본은 미국 노동시장 전체를 대표하기에는 좁다. 셋째, 데이터는 <strong>2025년 초의 스냅샷</strong>이라 AI 역량이 빠르게 오르는 만큼 빠르게 노후화한다 — 오늘의 적신호가 내일의 청신호가 될 수 있다. 넷째, 응답의 진실성 문제다. <strong>고용 불안</strong> 탓에 "내 일을 자동화하고 싶다"고 솔직히 답하기를 유보한 노동자가 있을 수 있고, 그렇다면 자동화 욕구는 실제보다 과소 측정됐을 가능성이 있다.</p>
+      <div class="pitfall">
+        <p>HAS를 "AI 성능 등급"으로 오해하지 말 것. HAS는 <strong>기술이 할 수 있는 수준</strong>이 아니라 <strong>사람이 원하는 개입 수준</strong>을 잰다. H5라고 해서 AI가 무능한 과제가 아니라, 사람이 끝까지 붙어 있고 <em>싶어 하는</em> 과제라는 뜻이다.</p>
+      </div>
+    </section>
+
+    <section id="s6" class="prose">
+      <h2>내 연구와의 연결</h2>
+      <p>이 논문이 내 작업에 주는 선물은 정확히 <strong>HAS라는 어휘</strong>다. HAS는 "AI가 어디까지 개입하고 언제 물러나야 하는가"를 다섯 단계로 정량화한 <strong>개입 경계 척도</strong>다. 나는 네버마인드를 만들며 줄곧 <strong>"추천하되 결정은 사용자"</strong>라는 원칙을 붙들어 왔는데, 이 원칙은 HAS의 언어로 옮기면 정확히 <strong>H3-H4 구간</strong>이다 — AI가 동등하게 끌되, 최종 판단은 사람에게 돌려준다.</p>
+      <p>그동안 이 원칙은 '감'이었다. 자율성을 사용자에게 남겨 두는 게 옳다는 직관. 이 논문은 그 직관을 <strong>1,500명의 데이터</strong>로 뒷받침한다. 내가 진행한 163명 인터뷰에서 73%가 긍정 반응을 보인 것은, 이 논문의 <strong>"47.5%가 전문가보다 높은 개입을 원한다"</strong>와 같은 방향을 가리킨다 — 사람들은 통제권을 빼앗기는 자동화가 아니라, 통제권을 쥔 채 도움을 받는 증강을 원한다.</p>
+      <div class="key-point">
+        <p>야간 자동화 루프(night loop)의 설계 정당성도 여기서 나온다. 저가치·반복 과제만 <strong>H1-H2</strong>로 무인 처리하고, 판단이 필요한 지점은 <strong>H3 이상에서 사용자에게 회귀</strong>시킨다. 즉 "무엇을 자동으로 돌리고 무엇을 사람에게 되묻는가"의 경계를, 이제 감이 아니라 HAS라는 척도로 그을 수 있다.</p>
+        <p>더 나아가 장기 개인 지식 기반(personal knowledge base)이 있다면, 에이전트가 <strong>사용자마다 다른 '원하는 개입 단계'를 과제별로 학습</strong>할 수 있다. 누군가에게 H2인 일이 다른 이에겐 H4다 — 그 차이를 기억하는 것이 곧 초개인화의 핵심이다.</p>
+      </div>
+    </section>
+
+    <section id="s7" class="prose">
+      <h2>컨택 이메일</h2>
+      <p>Fall 2027 대학원 지원을 염두에 둔, Diyi Yang 교수께 보낼 컨택 초안의 핵심 문단이다. 논문의 기여(HAS)를 내 시스템 설계와 직접 연결하고, 함께 논의하고 싶은 연구 방향을 한 호흡으로 제시한다.</p>
+      <div class="key-point">
+        <p style="font-family:var(--mono);font-size:.9rem;line-height:1.7;">Your Human Agency Scale gave me a precise vocabulary for the design principle behind my own system — keeping AI in an advisory role (around H3-H4) while preserving the user's final decision — and I'd love to discuss how a long-term personal knowledge base could let an agent learn each user's desired agency level per task.</p>
+      </div>
+    </section>
+
+    <nav class="ch-foot">
+      <a href="../p2-andreas-gate/index.html"><div class="dir">← 이전</div><div class="ti">GATE — 능동 선호 추출</div></a>
+      <a href="../p4-yang-cooperbench/index.html" class="next"><div class="dir">다음 →</div><div class="ti">CooperBench — 조정의 저주</div></a>
+    </nav>
+  </main>
+</div>
+
+<script>
+  // ── scroll-progress ──
+  const progress = document.querySelector('.scroll-progress');
+  function updateProgress() {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    progress.style.transform = 'scaleX(' + (scrolled || 0) + ')';
+  }
+  document.addEventListener('scroll', updateProgress, { passive: true });
+  updateProgress();
+
+  // ── scrollspy ──
+  const navLinks = Array.from(document.querySelectorAll('.ch-nav a'));
+  const sections = navLinks.map(a => document.querySelector(a.getAttribute('href')));
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = '#' + e.target.id;
+        navLinks.forEach(a => a.classList.toggle('current', a.getAttribute('href') === id));
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+  sections.forEach(s => s && spy.observe(s));
+
+  // ── KaTeX ──
+  window.addEventListener('load', () => {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ]
+      });
+    }
+  });
+
+  // ── 위젯: HAS H1-H5 슬라이더 ──
+  (function () {
+    const STAGES = [
+      null,
+      { lvl: 'H1', mode: '자동화 구간', col: 'var(--structure)', ttl: 'AI 단독 수행',
+        desc: '사람의 입력 없이 AI가 과제를 처음부터 끝까지 처리한다. 인간은 결과만 받는다.' },
+      { lvl: 'H2', mode: '자동화 구간', col: 'var(--structure)', ttl: '최소 입력',
+        desc: 'AI가 주도하고, 사람은 시작에 최소한의 정보나 지시만 보탠다. 진행은 거의 무인.' },
+      { lvl: 'H3', mode: '증강 구간', col: 'var(--synth)', ttl: '동등 파트너십',
+        desc: 'AI와 사람이 절반씩 일을 끌고 간다. 노동자가 가장 선호한 협업 형태.' },
+      { lvl: 'H4', mode: '증강 구간', col: 'var(--style)', ttl: '인간 입력 필수',
+        desc: '사람의 판단 없이는 과제가 진행되지 않는다. AI는 사람의 결정을 보조한다.' },
+      { lvl: 'H5', mode: '증강 구간', col: 'var(--style)', ttl: '지속 관여 필수',
+        desc: '사람이 전 과정에 계속 붙어 있어야 한다. AI는 곁의 도구로만 작동한다.' }
+    ];
+    const range  = document.getElementById('hasRange');
+    const marker = document.getElementById('hasMarker');
+    const lab    = document.getElementById('hasLab');
+    const lvlEl  = document.getElementById('hasLvl');
+    const modeEl = document.getElementById('hasMode');
+    const ttlEl  = document.getElementById('hasTtl');
+    const descEl = document.getElementById('hasDesc');
+    const flag   = document.getElementById('hasFlag');
+    const ticks  = Array.from(document.querySelectorAll('#hasTicks span'));
+    const btnH3  = document.getElementById('hasH3');
+
+    function render(h) {
+      const s = STAGES[h];
+      // 마커 위치: H1=10%, H5=90% (5단계를 가운데 정렬)
+      marker.style.left = (10 + (h - 1) * 20) + '%';
+      lab.textContent = s.lvl + ' · ' + s.ttl;
+      lvlEl.textContent = s.lvl;  lvlEl.style.color = s.col;
+      modeEl.textContent = s.mode; modeEl.style.color = s.col;
+      ttlEl.textContent = s.ttl;
+      descEl.textContent = s.desc;
+      ticks.forEach(t => t.classList.toggle('on', +t.dataset.h === h));
+      flag.classList.toggle('show', h === 3);
+    }
+    range.addEventListener('input', () => render(+range.value));
+    btnH3.addEventListener('click', () => { range.value = 3; render(3); });
+    render(1);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eliciting Human Preferences (GATE) — Jacob Andreas</title>
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+<script src="../assets/wiki.js" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+/* ── GATE 선호 공간 좁히기 위젯 ── */
+.ge-stage { display: grid; grid-template-columns: 1fr 16rem; gap: 1.2rem; padding: 1.4rem 1.1rem 1rem; }
+@media (max-width: 760px) { .ge-stage { grid-template-columns: 1fr; } }
+.ge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.ge-cell {
+  position: relative; aspect-ratio: 1; border-radius: 10px;
+  border: 1px solid var(--line); background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .2rem; padding: .3rem; text-align: center;
+  transition: transform .35s var(--ease), opacity .35s var(--ease), filter .35s var(--ease), border-color .25s;
+}
+.ge-cell .ge-emoji { font-size: 1.5rem; line-height: 1; }
+.ge-cell .ge-tag { font-family: var(--mono); font-size: .58rem; color: var(--ink-faint); line-height: 1.2; }
+.ge-cell.live { border-color: var(--structure-lo); box-shadow: 0 0 0 1px var(--structure-bg); }
+.ge-cell.dead { opacity: .16; transform: scale(.82); filter: grayscale(1); pointer-events: none; }
+.ge-cell.target { border-color: var(--style); box-shadow: 0 0 0 2px var(--style-bg); }
+.ge-side { display: flex; flex-direction: column; gap: .75rem; }
+.ge-q { padding: .7rem .85rem; background: var(--paper-2); border-radius: 10px; border-left: 3px solid var(--structure); }
+.ge-q .ge-qlab { font-family: var(--mono); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--structure); font-weight: 700; }
+.ge-q .ge-qtext { font-size: .9rem; color: var(--ink); line-height: 1.45; margin-top: .25rem; }
+.ge-btns { display: flex; gap: .45rem; }
+.ge-btns .btn { flex: 1; }
+.ge-btns .btn.yes { background: var(--structure); color: #fff; }
+.ge-btns .btn.no { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+.ge-meters { display: flex; flex-direction: column; gap: .55rem; }
+.ge-meter .ge-mlab { font-family: var(--mono); font-size: .66rem; letter-spacing: .04em; color: var(--ink-faint); display: flex; justify-content: space-between; }
+.ge-meter .ge-mlab b { color: var(--ink); }
+.ge-bar { height: 7px; background: var(--paper-sink); border-radius: 4px; overflow: hidden; margin-top: .3rem; }
+.ge-bar i { display: block; height: 100%; border-radius: 4px; transition: width .4s var(--ease); }
+.ge-bar.gate i { background: var(--structure); }
+.ge-bar.prompt i { background: var(--style); }
+.ge-status { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; padding: .55rem .7rem; background: var(--structure-bg); border-radius: 8px; min-height: 3.4rem; }
+.ge-status b { color: var(--structure); }
+.ge-status.win { background: var(--style-bg); }
+.ge-status.win b { color: var(--style); }
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+<div class="topbar">
+  <a class="home" href="../index.html">← 전체 목록</a>
+  <span class="ch-mini">PAPER 2 / 8 · Andreas</span>
+</div>
+
+<div class="ch-layout">
+<aside class="ch-nav">
+  <nav>
+    <ol>
+      <li><a href="#s1" class="current">한 줄 요약</a></li>
+      <li><a href="#s2">문제와 동기</a></li>
+      <li><a href="#s3">핵심 아이디어</a></li>
+      <li><a href="#s4">주요 결과</a></li>
+      <li><a href="#s5">한계</a></li>
+      <li><a href="#s6">내 연구와의 연결</a></li>
+      <li><a href="#s7">컨택 이메일</a></li>
+    </ol>
+  </nav>
+</aside>
+
+<main class="ch-main">
+<header class="ch-head">
+  <span class="kicker">Jacob Andreas · MIT/Stanford · ICLR 2025 · arXiv:2310.11589</span>
+  <h1>먼저 물어봐서 선호를 끌어내기</h1>
+  <p class="lede">사용자는 자기 선호를 완전히 말하지 못한다 — LM이 먼저 질문해 끌어내는 GATE. 네버마인드 선호 학습 루프의 정중앙.</p>
+</header>
+
+<section id="s1" class="prose">
+<p>이 논문의 결론은 한 문장으로 압축된다. <strong>언어 모델이 능동적으로 자유로운 질문과 엣지 케이스를 던져 사용자의 선호를 끌어내는</strong> 절차, 즉 <span class="t-structure">GATE</span>(<span class="term">Generative Active Task Elicitation</span>, 생성적 능동 과제 끌어내기)가, 사용자가 직접 손으로 쓴 프롬프트나 라벨링한 예시보다 더 많은 정보를 담은 선호 신호를 만들어낸다는 것이다. 388명의 사전등록(<span class="term">pre-registered</span>) 실험이 이를 뒷받침한다.</p>
+
+<p>왜 이것이 중요한가. 우리는 보통 "사용자가 원하는 것을 시스템에 알려주는" 일을 사용자의 몫으로 떠넘긴다. 프롬프트를 쓰게 하고, 예시를 고르게 한다. 그러나 이 논문은 그 전제를 뒤집는다. 명세(<span class="term">specification</span>)의 부담을 사용자가 아니라 모델 쪽으로 옮기고, 모델이 먼저 질문하게 만들면 더 나은 정렬(<span class="term">alignment</span>)이 가능하다. 저자는 <a href="https://arxiv.org/abs/2310.11589">arXiv abs</a> · <a href="https://arxiv.org/pdf/2310.11589">PDF</a> 에서 이 주장을 세 개의 실제 도메인에 걸쳐 검증한다.</p>
+
+<p>저자는 Belinda Z. Li, Alex Tamkin, Noah Goodman, Jacob Andreas로, MIT와 Stanford 소속이다. 발표 무대는 <span class="t-synth">ICLR 2025</span>. 이 노트는 그중에서도 "사용자는 자기 선호를 완전히 명세하지 못한다"는 발견 하나에 집중한다 — 그 발견이 내가 설계 중인 장기기억 개인 AI의 선호 학습 루프와 정확히 같은 자리에 있기 때문이다.</p>
+</section>
+
+<section id="s2" class="prose">
+<h2>문제와 동기 — 왜 "지시"가 무너지는가</h2>
+
+<p>기존 방식으로 사용자의 선호를 시스템에 주입하는 통로는 크게 둘이다. 하나는 <strong>라벨링된 예시</strong>(이건 좋아요, 저건 싫어요를 데이터로 표시), 다른 하나는 <strong>프롬프트</strong>(원하는 바를 자연어로 직접 서술). 둘 다 사용자에게 적지 않은 부담을 지운다. 그런데 부담만이 문제가 아니다. 더 근본적인 문제는, 사람이 자기 선호를 <span class="t-style">명료하게 언어화하지 못한다</span>는 데 있다.</p>
+
+<p>구체적으로 두 가지 인지적 결함이 작동한다. 첫째, 사용자는 자신이 무엇을 원하는지 머릿속에 또렷하게 가지고 있지 않다. 막상 말로 옮기려 하면 빠진 구석이 생긴다. 둘째, 설령 핵심 선호를 안다 해도 <span class="t-structure">엣지 케이스</span>(<span class="term">edge case</span>, 경계 상황)를 미리 다 떠올리지 못한다. "여행 관련 이메일은 다 보여줘"라고 말한 사용자가 막상 항공권 취소 알림이나 출장 정산 메일까지 의도했는지는, 그 상황이 눈앞에 제시되기 전에는 본인도 모른다.</p>
+
+<p>이 논문이 던지는 가장 날카로운 경험적 증거가 바로 <strong>커버리지 과신</strong>이다. 사용자에게 프롬프트를 쓰게 한 뒤 "당신의 명세가 테스트 케이스의 몇 할을 커버한다고 보는가"를 물으면 평균 <span class="t-style">5.3</span>점이라 답한다. 그런데 실제 테스트 케이스 몇 개를 눈앞에 보여준 뒤 다시 물으면 자가평가가 <span class="t-style">3.9</span>점으로 떨어진다. 즉 사람은 자기 명세가 실제보다 더 완전하다고 착각하고 있었고, 반례를 보고 나서야 그 착각이 깨진다.</p>
+
+<div class="analogy">
+<b>이사 갈 집을 부동산에 설명하기.</b> 당신은 "조용하고 볕 잘 드는 집"이라고 말한다. 스스로는 충분히 설명했다고 믿는다(커버리지 5.3). 그런데 중개인이 "지하철역과의 거리는요? 반려동물은요? 1층은 괜찮으세요?"라고 되물으면, 그제야 미처 생각 못 한 조건들이 쏟아져 나온다(3.9로 추락). 당신의 선호가 부족했던 게 아니다 — 단지 <em>먼저 물어봐 주는 사람</em>이 없어서 표면으로 끌려 나오지 못했을 뿐이다. GATE는 바로 그 "먼저 물어봐 주는 중개인"을 언어 모델로 자동화한다.</div>
+
+<p>그래서 결론은 분명하다. "사용자가 자기 선호를 완전히 명세할 수 있다"는 암묵적 전제는 깨졌다. 명세의 부담을 모델로 옮겨, 모델이 먼저 질문하는 <strong>능동적 끌어내기</strong>(<span class="term">active elicitation</span>)가 필요하다. 수동적으로 입력을 기다리는 시스템은 사용자가 말하지 못한 절반을 영원히 놓친다.</p>
+</section>
+
+<div class="widget">
+<div class="widget-frame">
+  <div class="widget-label"><span class="lab-no">위젯</span><span>선호 공간 좁히기 — yes/no 질문 vs 자유 프롬프트</span></div>
+  <div class="ge-stage">
+    <div class="ge-grid" id="geGrid"></div>
+    <div class="ge-side">
+      <div class="ge-q">
+        <div class="ge-qlab">GATE의 질문</div>
+        <div class="ge-qtext" id="geQText">아래 후보 중 무엇을 추천받고 싶으세요?</div>
+      </div>
+      <div class="ge-btns">
+        <button class="btn yes" id="geYes">예</button>
+        <button class="btn no" id="geNo">아니오</button>
+      </div>
+      <div class="ge-meters">
+        <div class="ge-meter">
+          <div class="ge-mlab"><span>GATE (yes/no) 남은 후보</span><b id="geGateN">16</b></div>
+          <div class="ge-bar gate"><i id="geGateBar" style="width:100%"></i></div>
+        </div>
+        <div class="ge-meter">
+          <div class="ge-mlab"><span>자유 프롬프트 한 번 남은 후보</span><b id="gePromptN">16</b></div>
+          <div class="ge-bar prompt"><i id="gePromptBar" style="width:100%"></i></div>
+        </div>
+      </div>
+      <div class="ge-status" id="geStatus">질문에 <b>예/아니오</b>로 답할 때마다 후보가 절반씩 사라집니다. 오른쪽 "자유 프롬프트 한 번"과 효율을 비교해 보세요.</div>
+    </div>
+  </div>
+  <div class="widget-controls">
+    <button class="btn ghost" id="gePrompt">자유 프롬프트 한 번 던지기</button>
+    <button class="btn ghost" id="geReset">처음으로</button>
+    <span class="legend"><i style="background:var(--structure)"></i>yes/no 끌어내기 &nbsp; <i style="background:var(--style)"></i>자유 프롬프트(저커버리지)</span>
+  </div>
+</div>
+<p class="widget-cap">목표 항목(빨간 테두리)을 향해 좁혀 보세요. yes/no 질문은 매번 후보를 <b>절반</b>으로 가릅니다(이진 탐색, 한 번에 1비트). 반면 "자유 프롬프트 한 번"은 사용자가 한 번에 모든 조건을 떠올리지 못해 <b>절반만</b> 걸러집니다 — 커버리지 과신(5.3→3.9)의 시각화입니다. 저마찰 이진 질문이 왜 정보 효율이 높은지 손으로 확인할 수 있습니다.</p>
+</div>
+
+<section id="s3" class="prose">
+<h2>핵심 아이디어 — 언어 모델을 "끌어내기 정책"으로</h2>
+
+<p>GATE의 발상은 단순하면서 강력하다. 언어 모델을 단지 답을 내는 도구가 아니라, <strong>선호를 끌어내는 정책</strong>(<span class="term">elicitation policy</span>)으로 쓰는 것이다. 정책이란 "지금까지의 대화를 보고 다음에 무엇을 물을지 결정하는 규칙"을 뜻한다. 모델이 사용자에게 능동적으로 질문을 생성하고, 답을 받아 선호 모형을 갱신하고, 다시 다음 질문을 만든다.</p>
+
+<p>저자는 세 가지 끌어내기 정책을 비교한다. 첫째 <span class="t-structure">생성적 능동 학습</span>(<span class="term">generative active learning</span>): 모델이 사용자에게 보여줄 예시를 직접 생성해 "이건 좋아요, 싫어요?"를 묻는다. 둘째 <span class="t-structure">yes/no 질문</span>: 모델이 이진으로 답할 수 있는 질문을 생성한다. 셋째 <span class="t-structure">개방형 질문</span>(<span class="term">open-ended question</span>): 자유 서술을 유도하는 질문을 던진다. 이 셋을 묶어 GATE 계열이라 부른다.</p>
+
+<p>비교 대상이 되는 베이스라인은 셋이다. <span class="t-style">지도 학습</span>(<span class="term">supervised learning</span>, 사용자가 라벨한 예시로 학습), <span class="t-style">풀 기반 능동 학습</span>(<span class="term">pool-based active learning</span>, 고정된 예시 풀에서 모델이 질문할 것을 고름), 그리고 <span class="t-style">사용자 자필 프롬프트</span>(<span class="term">user-written prompt</span>)다. 핵심 대조는 "모델이 예시 풀에 갇혀 고르기만 하느냐(pool-based)" vs "모델이 질문 자체를 자유롭게 생성하느냐(generative)"에 있다.</p>
+
+<p>실험 도메인은 세 가지로, 일상적이면서도 선호가 사람마다 갈리는 영역을 골랐다. (1) <strong>이메일 유효성 판정</strong>(어떤 주소가 유효한지에 대한 개인 규칙), (2) <strong>콘텐츠 추천</strong>(무엇을 추천받고 싶은지), (3) <strong>도덕 추론</strong>(윤리적 판단의 개인차). 사용한 모델은 <span class="term">gpt-4-0613</span>이며 온도(<span class="term">temperature</span>)는 0으로 고정해 재현성을 확보했다.</p>
+
+<p>여기서 한 가지 정량 지표가 등장한다. 선호의 이질성(사람마다 답이 갈리는 정도)을 질문당 평균 엔트로피로 측정했는데, 그 값이 <span class="t-synth">0.77 bits</span>였다. 엔트로피가 0이면 모두가 같은 답(물어볼 가치 없음), 1 bit에 가까우면 답이 반반으로 갈린다는 뜻이다. 0.77이라는 값은 질문들이 실제로 사람마다 다른 선호를 짚어내고 있었음을, 즉 의미 있는 정보를 길어 올리고 있었음을 가리킨다.</p>
+
+<div class="math-block">$$H(Q) = -\sum_{a \in \{\text{yes},\,\text{no}\}} p(a)\,\log_2 p(a)$$</div>
+<p class="math-note">질문 Q에 대한 답의 엔트로피. 답이 사용자마다 반반(p=0.5)으로 갈리면 H=1 bit로 최대 — 그 질문이 사람들을 가장 잘 구별한다는 뜻. 실측 평균 0.77 bits는 질문들이 선호 이질성을 효과적으로 포착했음을 시사한다.</p>
+</section>
+
+<section id="s4" class="prose">
+<h2>주요 결과 — 생성적 yes/no가 프롬프트를 이긴다</h2>
+
+<p>총 <span class="t-structure">388명</span>의 참가자를 대상으로 한 사전등록 실험에서, 결과는 일관되게 GATE 쪽으로 기울었다. GATE 계열은 사용자 자필 프롬프트 대비 <strong>절대 성능에서 10개 설정 중 6개</strong>, <strong>AUC(곡선 아래 면적, 누적 성능 지표)에서 10개 중 7개</strong>를 개선했다. 모든 설정에서 이긴 것은 아니지만, 다수 설정에서 우위가 확인됐다는 점이 핵심이다.</p>
+
+<p>가장 두드러진 승자는 <span class="t-structure">생성적 yes/no 질문</span>이었다. 이 정책은 <strong>모든 설정에서</strong> 사용자 자필 프롬프트를 능가했다. 위 위젯에서 체감한 그대로다 — 이진 질문은 매번 선호 공간을 절반으로 가르므로, 정보 효율이 가장 높다. 사용자에게는 그저 "예/아니오"만 누르면 되니 마찰(<span class="term">friction</span>)도 가장 낮다. 효율과 저마찰이 동시에 성립하는 드문 조합이다.</p>
+
+<p>왜 대화형이 자필 프롬프트보다 나은가. 두 가지 메커니즘이 작동한다. 첫째, 대화형은 <span class="t-style">인지 부담이 낮다</span> — 사용자가 백지에서 모든 조건을 떠올려 서술할 필요 없이, 모델이 던진 질문에 반응만 하면 된다. 둘째, 모델의 질문이 사용자가 <strong>평소 떠올리지 못했던 고려사항을 표면으로 끌어올린다</strong>. 앞서 본 부동산 비유 그대로, 먼저 물어봐 주니 잠재된 선호가 의식 위로 떠오른다.</p>
+
+<div class="key-point">
+<p><strong>생성적 yes/no 질문이 모든 설정에서 자필 프롬프트를 이겼다.</strong> 매 질문이 선호 공간을 이진으로 가르므로 정보량이 최대이고, 사용자는 탭 한 번이면 되니 마찰은 최소다. 효율과 저마찰의 동시 성립이 이 정책의 핵심 강점이다.</p>
+</div>
+
+<p>여기서 한 발 더 나아가면, 이 결과는 "어떤 UX로 선호를 수집할 것인가"라는 제품 설계 질문에 직접 답을 준다. 길게 적게 하지 말고, 이진으로 묻고 한 번에 한 칸씩 좁혀라.</p>
+</section>
+
+<section id="s5" class="prose">
+<h2>한계 — 어디까지 믿을 수 있나</h2>
+
+<p>이 논문이 강력하다고 해서 모든 곳에 그대로 이식할 수 있는 것은 아니다. 저자 스스로 밝힌, 그리고 정독에서 읽어낸 한계는 다음과 같다.</p>
+
+<p>첫째, <strong>비용-정렬 트레이드오프가 최적화되지 않았다</strong>. 질문을 많이 던질수록 선호는 정확해지지만, 사용자의 시간과 토큰 비용이 늘어난다. 어디서 멈출지(언제 충분한지)에 대한 최적 정책은 이 논문의 범위 밖이다. 둘째, <strong>참가자가 전원 미국 영어권</strong>이어서 문화적, 언어적 다양성이 좁다. 선호의 형태 자체가 문화에 따라 달라질 수 있으므로 일반화에 주의가 필요하다.</p>
+
+<p>셋째, <strong>일부 도메인에서는 통계적 유의성이 확보되지 않았다</strong>. 10개 설정 중 6~7개에서 이겼다는 말은, 뒤집으면 3~4개에서는 명확한 우위를 보이지 못했다는 뜻이다. 넷째, 핵심 모델이 <span class="term">GPT-4</span>(폐쇄형, 버전 폐기 위험)라서 재현성에 구조적 리스크가 있다. 특정 버전이 사라지면 동일 실험을 그대로 돌릴 수 없다. 다섯째, <strong>도덕 추론 도메인이 과도하게 단순화</strong>되어, 실제 윤리적 판단의 복잡성을 충분히 담지 못했다.</p>
+
+<div class="pitfall">
+<p>"GATE가 프롬프트를 이겼다"를 "항상, 모든 도메인에서 이긴다"로 읽으면 오해다. 정확히는 <em>다수 설정에서, 특히 생성적 yes/no 정책이</em> 이겼다. 통계적 유의성이 없는 설정과 도덕 도메인의 단순화, 그리고 단일 폐쇄형 모델 의존을 함께 기억해야 한다.</p>
+</div>
+</section>
+
+<section id="s6" class="prose">
+<h2>내 연구와의 연결 — 네버마인드 선호 학습 루프</h2>
+
+<p>이 논문은 내가 설계 중인 <strong>네버마인드</strong>(장기기억 기반 개인 AI SaaS)의 정중앙을 관통한다. 우리가 163명을 대상으로 한 설문에서 <span class="t-structure">73%</span>가 "시스템이 내 선호를 기억해 주기를" 원한다고 답했다. 그런데 GATE의 발견이 여기에 결정적 단서를 던진다 — 사용자는 자기 선호를 완전히 말하지 못하므로, 기억할 선호를 <em>사용자가 입력해 줄 때까지 기다리면 안 된다</em>. 시스템이 먼저 물어야 한다.</p>
+
+<p>이 통찰은 내 장기기억 설계의 골격을 바꾼다. 기존 구상은 <span class="t-style">수동적 지식 베이스</span>(<span class="term">passive KB</span>) — 사용자가 명시적으로 입력한 것만 저장하는 창고였다. GATE를 받아들이면 이를 <span class="t-structure">능동적 끌어내기 루프</span>(<span class="term">active elicitation loop</span>)로 재정의해야 한다. 즉 시스템이 자기가 확신 없는 부분을 스스로 식별하고, 그 빈칸을 질문으로 환원해 사용자에게서 채운다.</p>
+
+<p>구체적 메커니즘은 이렇다. 네버마인드의 야간 처리 루프가 그날의 상호작용을 정리하다가 <strong>자신 없는 엣지 케이스</strong>(이 사용자가 이 경계 상황을 어떻게 판단할지 불확실한 지점)를 골라낸다. 그러면 그것을 다음 접속 시 던질 yes/no 질문으로 변환한다. 사용자의 답은 곧바로 KB 엔트리가 되어 <strong>개입 경계</strong>(어디까지 자동으로 처리하고 어디서 멈춰 물어볼지)를 학습한다. GATE의 "능동 질문 → 선호 신호 → 모형 갱신" 순환을 장기기억 제품 안에 그대로 심는 것이다.</p>
+
+<p>특히 <span class="t-structure">yes/no 정책이 모든 설정에서 이겼다</span>는 결과는 UX 결정을 곧장 내려준다. 저마찰 이진 탭(질문에 한 번 탭) UI가 선호 수집 효율이 가장 높다. 사용자에게 긴 서술을 요구하지 말고, 가볍게 톡 누르는 이진 질문으로 매일 한 칸씩 선호 공간을 좁힌다.</p>
+
+<p>커버리지 과신(5.3→3.9)이라는 발견도 네버마인드를 넘어 일반화된다. <strong>BookLive RAG</strong>(검색 증강 생성 기반 독서 도우미)나 <strong>MicroLearnable</strong>(마이크로 러닝)에서도, 사용자가 "내가 원하는 걸 다 말했다"고 믿는 순간이 가장 위험하다. 반례를 먼저 보여줘 착각을 깨고, 그 자리에서 선호를 재수집하는 능동 루프가 어디서나 유효하다.</p>
+
+<div class="key-point">
+<p><strong>핵심 이식 포인트.</strong> 장기기억을 "사용자가 입력한 것을 저장하는 창고"에서 "시스템이 자신 없는 엣지 케이스를 yes/no 질문으로 환원해 선호를 채우는 능동 루프"로 재정의한다. 야간 루프가 불확실한 지점을 골라 다음 접속의 질문으로 만들고, 그 답이 개입 경계를 학습하는 KB 엔트리가 된다 — 이것이 GATE를 네버마인드에 심는 방식이다.</p>
+</div>
+</section>
+
+<section id="s7" class="prose">
+<h2>컨택 이메일 — Jacob Andreas</h2>
+
+<p>Fall 2027 대학원 컨택 시, 이 논문의 핵심 발견과 내 연구를 직접 잇는 한 문단이다. 막연한 칭찬이 아니라, 그의 발견(생성적 yes/no 질문이 자필 프롬프트보다 정보량이 높다)을 내 설계 과제(장기기억 개인 AI의 능동 선호 끌어내기 루프, 설문 응답자 163명 중 73%가 선호 능동 학습을 원함)와 한 문장으로 묶어 "당신의 결과가 내 설계를 어떻게 바꾸는지"를 보인다.</p>
+
+<div class="model-answer">
+<div class="ma-label">📧 Contact email — anchor paragraph</div>
+<p class="ma-en">Your GATE framework's finding that LM-generated yes/no and open-ended questions elicit more informative preference signals than user-written prompts directly shapes how I'm designing the active preference-elicitation loop for a long-term-memory personal AI agent where 73% of 163 surveyed users wanted the system to actively learn their preferences.</p>
+</div>
+
+<p>이 문단이 강한 이유는 세 가지다. 그의 구체적 발견을 정확히 인용했고(yes/no와 개방형 질문이 자필 프롬프트보다 정보량 우위), 그것이 내 설계 의사결정을 <em>실제로</em> 바꾸고 있음을 보였으며(능동 선호 끌어내기 루프), 내 연구가 허공의 아이디어가 아니라 검증된 수요 위에 서 있음을(163명 중 73%) 한 호흡에 전달한다.</p>
+</section>
+
+<nav class="ch-foot">
+  <a href="../p1-andreas-shoot/index.html">
+    <div class="dir">← 이전</div>
+    <div class="ti">Shoot First — 탐색 vs 행동</div>
+  </a>
+  <a href="../p3-yang-future-of-work/index.html" class="next">
+    <div class="dir">다음 →</div>
+    <div class="ti">Future of Work — HAS</div>
+  </a>
+</nav>
+</main>
+</div>
+
+<script>
+/* ── 스크롤 진행 바 ── */
+(function(){
+  var bar = document.querySelector('.scroll-progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var p = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    bar.style.width = p + '%';
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+/* ── 스크롤스파이 (사이드바 current) ── */
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.ch-nav a'));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function onSpy(){
+    var y = window.scrollY + window.innerHeight * 0.3;
+    var idx = 0;
+    for (var i = 0; i < sections.length; i++){
+      if (sections[i] && sections[i].offsetTop <= y) idx = i;
+    }
+    links.forEach(function(a, i){ a.classList.toggle('current', i === idx); });
+  }
+  document.addEventListener('scroll', onSpy, { passive: true });
+  window.addEventListener('resize', onSpy);
+  onSpy();
+})();
+
+/* ── KaTeX 렌더 ── */
+window.addEventListener('DOMContentLoaded', function(){
+  if (window.renderMathInElement){
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  }
+});
+
+/* ── 위젯: 선호 공간 좁히기 ── */
+(function(){
+  var grid = document.getElementById('geGrid');
+  if (!grid) return;
+
+  var ITEMS = [
+    { e: '🎬', t: '영화' }, { e: '📚', t: '소설' }, { e: '🎧', t: '팟캐스트' }, { e: '📰', t: '뉴스' },
+    { e: '🎮', t: '게임' }, { e: '🍳', t: '레시피' }, { e: '✈️', t: '여행' }, { e: '💪', t: '운동' },
+    { e: '🎨', t: '미술' }, { e: '🎸', t: '음악' }, { e: '📈', t: '투자' }, { e: '🧑‍💻', t: '코딩' },
+    { e: '🪴', t: '원예' }, { e: '🐶', t: '반려동물' }, { e: '🧘', t: '명상' }, { e: '☕', t: '커피' }
+  ];
+  var N = ITEMS.length;            // 16
+  var TARGET = 11;                 // 목표 항목 인덱스 (코딩)
+
+  // GATE yes/no 질문 시퀀스 (각 질문은 후보를 이진으로 가른다)
+  var QUESTIONS = [
+    '실내에서 즐기는 활동을 추천받고 싶으세요?',
+    '디지털/화면 기반 콘텐츠를 선호하세요?',
+    '능동적으로 만들거나 짓는 활동인가요?',
+    '결과물이 곧장 손에 남는 것을 원하세요?'
+  ];
+
+  var cells = [];
+  var liveGate = [];     // GATE가 살려둔 후보 인덱스
+  var livePrompt = [];   // 프롬프트가 남긴 후보 인덱스
+  var step = 0;
+  var won = false;
+
+  var qText = document.getElementById('geQText');
+  var statusEl = document.getElementById('geStatus');
+  var gateN = document.getElementById('geGateN');
+  var promptN = document.getElementById('gePromptN');
+  var gateBar = document.getElementById('geGateBar');
+  var promptBar = document.getElementById('gePromptBar');
+
+  function buildGrid(){
+    grid.innerHTML = '';
+    cells = [];
+    ITEMS.forEach(function(it, i){
+      var c = document.createElement('div');
+      c.className = 'ge-cell live' + (i === TARGET ? ' target' : '');
+      c.innerHTML = '<span class="ge-emoji">' + it.e + '</span><span class="ge-tag">' + it.t + '</span>';
+      grid.appendChild(c);
+      cells.push(c);
+    });
+  }
+
+  function reset(){
+    step = 0; won = false;
+    liveGate = ITEMS.map(function(_, i){ return i; });
+    livePrompt = ITEMS.map(function(_, i){ return i; });
+    buildGrid();
+    qText.textContent = QUESTIONS[0];
+    statusEl.className = 'ge-status';
+    statusEl.innerHTML = '질문에 <b>예/아니오</b>로 답할 때마다 후보가 절반씩 사라집니다. 오른쪽 "자유 프롬프트 한 번"과 효율을 비교해 보세요.';
+    render();
+  }
+
+  function render(){
+    cells.forEach(function(c, i){
+      var alive = liveGate.indexOf(i) !== -1;
+      c.classList.toggle('dead', !alive);
+      c.classList.toggle('live', alive);
+    });
+    gateN.textContent = liveGate.length;
+    promptN.textContent = livePrompt.length;
+    gateBar.style.width = (liveGate.length / N * 100) + '%';
+    promptBar.style.width = (livePrompt.length / N * 100) + '%';
+  }
+
+  // yes/no 한 번: 살아있는 후보를 절반으로, 단 목표는 항상 살린다
+  function halve(list, keepTarget){
+    if (list.length <= 1) return list;
+    var withTarget = list.indexOf(TARGET) !== -1 && keepTarget;
+    var keep = Math.max(1, Math.ceil(list.length / 2));
+    var next = [];
+    if (withTarget){ next.push(TARGET); }
+    for (var i = 0; i < list.length && next.length < keep; i++){
+      if (list[i] === TARGET) continue;
+      next.push(list[i]);
+    }
+    return next;
+  }
+
+  function answer(){
+    if (won) return;
+    liveGate = halve(liveGate, true);
+    step++;
+    render();
+    if (liveGate.length <= 1){
+      won = true;
+      statusEl.className = 'ge-status win';
+      statusEl.innerHTML = 'yes/no 질문 <b>' + step + '회</b>만에 16개 후보를 1개로 좁혔습니다. 이진 질문은 매번 1비트씩 — log₂16 = 4회면 충분합니다. <b>저마찰 + 고효율</b>의 동시 성립.';
+      qText.textContent = '선호 끌어내기 완료 ✓';
+      return;
+    }
+    qText.textContent = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+    statusEl.className = 'ge-status';
+    statusEl.innerHTML = '좋아요. 후보가 <b>' + liveGate.length + '개</b>로 좁혀졌습니다. 한 번 더 — 이진 질문은 답이 무엇이든 매번 절반을 가릅니다.';
+  }
+
+  function freePrompt(){
+    if (livePrompt.length <= N / 2){
+      statusEl.className = 'ge-status';
+      statusEl.innerHTML = '자유 프롬프트는 <b>한 번</b>만 던질 수 있습니다(사용자가 매번 새 조건을 떠올리긴 어려우니까요). 이미 사용했습니다 — 여기서 멈춥니다.';
+      return;
+    }
+    // 한 번에 절반만 걸러짐(커버리지 과신: 사용자가 조건을 다 떠올리지 못함)
+    livePrompt = halve(livePrompt, true);
+    render();
+    statusEl.className = 'ge-status';
+    statusEl.innerHTML = '자유 프롬프트 한 번으로는 <b>' + livePrompt.length + '개</b>까지만 좁혀집니다(절반). 사용자가 한 번에 모든 조건을 떠올리지 못해 커버리지가 낮은 탓 — <b>5.3→3.9</b> 과신의 결과입니다. yes/no는 같은 횟수로 더 깊이 좁힙니다.';
+  }
+
+  document.getElementById('geYes').addEventListener('click', answer);
+  document.getElementById('geNo').addEventListener('click', answer);
+  document.getElementById('gePrompt').addEventListener('click', freePrompt);
+  document.getElementById('geReset').addEventListener('click', reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>
